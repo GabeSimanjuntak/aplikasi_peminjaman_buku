@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
+import 'book/book_list_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -19,9 +20,12 @@ class AdminDashboard extends StatelessWidget {
           children: [
             Row(
               children: [
-                _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
-                  // Navigator.push(...)
-                }),
+              _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BookListPage()),
+                );
+              }),
                 _buildCard(Icons.category, "Kategori", Colors.orange, () {}),
               ],
             ),

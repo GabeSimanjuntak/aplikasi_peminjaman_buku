@@ -120,4 +120,39 @@ class ApiService {
     );
     return json.decode(res.body);
   }
+
+  // ======================= BUKU CRUD =======================
+
+  // GET ALL BUKU
+  static Future<List<dynamic>> getBooks() async {
+    final res = await http.get(Uri.parse("$baseUrl/buku"));
+    final body = json.decode(res.body);
+    return body["data"];
+  }
+
+  // CREATE BUKU
+  static Future<Map<String, dynamic>> createBook(Map<String, String> data) async {
+    final res = await http.post(
+      Uri.parse("$baseUrl/buku"),
+      headers: {"Accept": "application/json"},
+      body: data,
+    );
+    return json.decode(res.body);
+  }
+
+  // UPDATE BUKU
+  static Future<Map<String, dynamic>> updateBook(int id, Map<String, String> data) async {
+    final res = await http.post(
+      Uri.parse("$baseUrl/buku/$id?_method=PUT"),
+      headers: {"Accept": "application/json"},
+      body: data,
+    );
+    return json.decode(res.body);
+  }
+
+  // DELETE BUKU
+  static Future<Map<String, dynamic>> deleteBook(int id) async {
+    final res = await http.delete(Uri.parse("$baseUrl/buku/$id"));
+    return json.decode(res.body);
+  }
 }
