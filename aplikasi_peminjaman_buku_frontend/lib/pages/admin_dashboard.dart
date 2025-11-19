@@ -1,14 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import 'login_page.dart';
 
 class AdminDashboard extends StatelessWidget {
+  const AdminDashboard({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Dashboard Admin")),
-      body: Center(
-        child: Text(
-          "Selamat Datang Admin!",
-          style: TextStyle(fontSize: 22),
+      appBar: AppBar(
+        title: const Text("Dashboard Admin"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
+                  // Navigator.push(...)
+                }),
+                _buildCard(Icons.category, "Kategori", Colors.orange, () {}),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _buildCard(Icons.history, "Riwayat", Colors.green, () {}),
+                _buildCard(Icons.person, "Kelola User", Colors.purple, () {}),
+              ],
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final token = prefs.getString("token");
+
+                if (token != null) {
+                  await ApiService.logout(token);
+                }
+
+                // hapus session lokal
+                await prefs.clear();
+
+                // kembali ke halaman login
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginPage()),
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text("Logout"),
+            ),
+
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(IconData icon, String title, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 120,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color, width: 1.5),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(height: 10),
+              Text(title, style: TextStyle(fontSize: 16, color: color)),
+            ],
+          ),
         ),
       ),
     );

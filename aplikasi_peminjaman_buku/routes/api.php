@@ -13,6 +13,10 @@ Route::get('/test', fn() => response()->json(['message' => 'API Ready']));
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Forgot Password (OTP)
+Route::post('/forgot-password', [AuthController::class, 'sendOtp']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // ===========================
 // USER ONLY (auth + isUser)
