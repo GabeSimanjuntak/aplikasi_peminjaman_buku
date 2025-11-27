@@ -175,7 +175,7 @@ class UserDashboard extends StatelessWidget {
                   _ActionCard(
                     icon: Icons.person,
                     title: 'Pengembalian Buku',
-                    subtitle: 'Edit Status',
+                    subtitle: 'Status Pengembalian',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
