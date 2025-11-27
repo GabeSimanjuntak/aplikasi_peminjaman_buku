@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 import 'book/book_list_page.dart';
+import 'kategori/kategori_list_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -23,17 +24,22 @@ class AdminDashboard extends StatelessWidget {
               _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BookListPage()),
+                  MaterialPageRoute(builder: (_) => BookListPage()),
                 );
               }),
-                _buildCard(Icons.category, "Kategori", Colors.orange, () {}),
+              _buildCard(Icons.category, "Kategori Buku", Colors.orange, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const KategoriListPage()),
+                );
+              }),
               ],
             ),
             const SizedBox(height: 20),
             Row(
               children: [
-                _buildCard(Icons.history, "Riwayat", Colors.green, () {}),
-                _buildCard(Icons.person, "Kelola User", Colors.purple, () {}),
+                _buildCard(Icons.history, "Kelola Peminjaman", Colors.green, () {}),
+                _buildCard(Icons.person, "History Peminjaman", Colors.purple, () {}),
               ],
             ),
             const Spacer(),

@@ -68,7 +68,7 @@ class _BookListPageState extends State<BookListPage> {
                   title: Text(buku["judul"]),
                   subtitle: Text(
                     "Penulis : ${buku["penulis"] ?? "-"}\n"
-                    "Kategori : ${buku["kategori"]?["nama"] ?? "-"}",
+                    "Kategori : ${buku["kategori"]?["nama_kategori"] ?? "-"}",
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

@@ -82,7 +82,7 @@ FOR EACH ROW
 EXECUTE FUNCTION set_status_buku_dikembalikan();
 
 CREATE OR REPLACE VIEW view_riwayat_peminjaman AS
-SELECT 
+SELECT
     p.id AS id_peminjaman,
 	p.id_user,
     u.nama AS nama_user,
