@@ -30,7 +30,7 @@ class ApiService {
   // =============================
   // REGISTER
   // =============================
-  static Future<Map<String, dynamic>> register({
+    static Future<Map<String, dynamic>> register({
     required String nama,
     required String email,
     required String username,
@@ -45,7 +45,7 @@ class ApiService {
         "email": email,
         "username": username,
         "password": password,
-        "role_id": roleId.toString(),
+                "role_id": roleId.toString(),
       },
     );
 
@@ -67,7 +67,7 @@ class ApiService {
     return json.decode(response.body);
   }
 
-  // SEND OTP
+    // SEND OTP
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     final res = await http.post(
       Uri.parse("$baseUrl/forgot-password"),
@@ -103,7 +103,7 @@ class ApiService {
   // ======================= BUKU CRUD =======================
 
   static Future<List<dynamic>> getBooks() async {
-    final prefs = await SharedPreferences.getInstance();
+        final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final response = await http.get(
@@ -118,41 +118,48 @@ class ApiService {
     return json["data"] ?? [];
   }
 
-  static Future<Map<String, dynamic>> createBook(String token, Map<String, dynamic> data) async {
-    final url = Uri.parse("$baseUrl/books"); // gunakan /books
-
+  static Future<Map<String, dynamic>> createBook(String token, Map data) async {
     final res = await http.post(
-      url,
+      Uri.parse("$baseUrl/buku"),
       headers: {
         "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
-      body: jsonEncode(data),
+      body: data, // ← jangan jsonEncode!
     );
 
     return jsonDecode(res.body);
   }
 
-  static Future<Map<String, dynamic>> updateBook(int id, Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> updateBook(int id, Map data) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final res = await http.post(
       Uri.parse("$baseUrl/buku/$id?_method=PUT"),
       headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
         "Authorization": "Bearer $token",
+        "Accept": "application/json",
       },
-      body: jsonEncode(data),
+      body: data,
     );
 
     return jsonDecode(res.body);
   }
 
   static Future<Map<String, dynamic>> deleteBook(int id) async {
-    final res = await http.delete(Uri.parse("$baseUrl/buku/$id"));
-    return json.decode(res.body);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.delete(
+      Uri.parse("$baseUrl/buku/$id"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    return jsonDecode(response.body);
   }
 
   // ======================= KATEGORI CRUD =======================
@@ -214,5 +221,91 @@ class ApiService {
     );
 
     return json.decode(response.body);
+  }
+
+  // ======================= USERS (untuk peminjaman) =======================
+
+  static Future<List<dynamic>> getUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await http.get(
+      Uri.parse("$baseUrl/users"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    return jsonDecode(res.body)["data"];
+  }
+
+  // ======================= PEMINJAMAN =======================
+
+  static Future<Map<String, dynamic>> createPeminjaman(Map data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await http.post(
+      Uri.parse("$baseUrl/peminjaman"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+      body: data,
+    );
+
+    return jsonDecode(res.body);
+  }
+
+  static Future<List<dynamic>> getPeminjamanAktif() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await http.get(
+      Uri.parse("$baseUrl/peminjaman"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    return jsonDecode(res.body)["data"];
+  }
+
+  static Future<Map<String, dynamic>> kembalikanBuku(int idPeminjaman) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await http.post(
+      Uri.parse("$baseUrl/pengembalian"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+      body: {
+        "id_peminjaman": idPeminjaman.toString(),
+      },
+    );
+
+    return jsonDecode(res.body);
+  }
+
+  static Future<List<dynamic>> getHistory() async {
+    final url = Uri.parse("$baseUrl/peminjaman/history");
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $authToken",
+        "Accept": "application/json"
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      return jsonData['data'];
+    } else {
+      throw Exception("Gagal mengambil history peminjaman");
+    }
   }
 }

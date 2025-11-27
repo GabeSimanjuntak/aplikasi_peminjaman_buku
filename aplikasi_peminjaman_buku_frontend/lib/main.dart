@@ -11,6 +11,7 @@ void main() {
       '/login': (_) => LoginPage(),
       '/admin': (_) => AdminDashboard(),
       '/user': (_) => UserDashboard(),
+      
     },
   ));
 }

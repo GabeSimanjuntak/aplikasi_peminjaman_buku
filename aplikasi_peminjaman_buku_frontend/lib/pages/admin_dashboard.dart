@@ -1,9 +1,11 @@
+import 'package:aplikasi_peminjaman_buku_frontend/pages/history/history_peminjaman_page.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 import 'book/book_list_page.dart';
 import 'kategori/kategori_list_page.dart';
+import 'peminjaman/peminjaman_list_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -21,28 +23,42 @@ class AdminDashboard extends StatelessWidget {
           children: [
             Row(
               children: [
-              _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => BookListPage()),
-                );
-              }),
-              _buildCard(Icons.category, "Kategori Buku", Colors.orange, () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const KategoriListPage()),
-                );
-              }),
+                _buildCard(Icons.book, "Kelola Buku", Colors.blue, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => BookListPage()),
+                  );
+                }),
+                _buildCard(Icons.category, "Kategori Buku", Colors.orange, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const KategoriListPage()),
+                  );
+                }),
               ],
             ),
             const SizedBox(height: 20),
+
             Row(
               children: [
-                _buildCard(Icons.history, "Kelola Peminjaman", Colors.green, () {}),
-                _buildCard(Icons.person, "History Peminjaman", Colors.purple, () {}),
+                _buildCard(Icons.history, "Kelola Peminjaman", Colors.green, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PeminjamanListPage()),
+                  );
+                }),
+
+                _buildCard(Icons.person, "History Peminjaman", Colors.purple, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HistoryPeminjamanPage()),
+                  );
+                }),
               ],
             ),
+
             const Spacer(),
+
             ElevatedButton(
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
@@ -52,10 +68,8 @@ class AdminDashboard extends StatelessWidget {
                   await ApiService.logout(token);
                 }
 
-                // hapus session lokal
                 await prefs.clear();
 
-                // kembali ke halaman login
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => LoginPage()),
@@ -68,7 +82,6 @@ class AdminDashboard extends StatelessWidget {
               ),
               child: const Text("Logout"),
             ),
-
           ],
         ),
       ),

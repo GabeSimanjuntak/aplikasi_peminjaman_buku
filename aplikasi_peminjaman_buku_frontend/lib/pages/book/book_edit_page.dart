@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/api_service.dart';
 
 class BookEditPage extends StatefulWidget {
-  final Map<String, dynamic> book;
+  final Map book;
   const BookEditPage({super.key, required this.book});
 
   @override
@@ -19,11 +19,9 @@ class _BookEditPageState extends State<BookEditPage> {
   late TextEditingController tahun;
   late TextEditingController deskripsi;
 
-  bool loading = false;
-
-  // === Dropdown kategori ===
   List kategoriList = [];
   String? selectedKategori;
+  bool loading = false;
 
   @override
   void initState() {
@@ -32,9 +30,8 @@ class _BookEditPageState extends State<BookEditPage> {
     judul = TextEditingController(text: widget.book["judul"]);
     penulis = TextEditingController(text: widget.book["penulis"]);
     penerbit = TextEditingController(text: widget.book["penerbit"]);
-    tahun = TextEditingController(text: widget.book["tahun"]);
+    tahun = TextEditingController(text: widget.book["tahun"].toString());
     deskripsi = TextEditingController(text: widget.book["deskripsi"]);
-
     selectedKategori = widget.book["id_kategori"].toString();
 
     loadKategori();
@@ -44,35 +41,24 @@ class _BookEditPageState extends State<BookEditPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
-    final data = await ApiService.getKategori(token!);
+    kategoriList = await ApiService.getKategori(token!);
 
-    setState(() {
-      kategoriList = data;
-    });
+    setState(() {});
   }
 
-  void updateBook() async {
+  Future<void> updateBook() async {
     if (!formKey.currentState!.validate()) return;
-
-    if (selectedKategori == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kategori belum dipilih")),
-      );
-      return;
-    }
 
     setState(() => loading = true);
 
-    final data = {
+    final res = await ApiService.updateBook(widget.book["id"], {
       "judul": judul.text,
       "penulis": penulis.text,
       "penerbit": penerbit.text,
       "tahun": tahun.text,
       "deskripsi": deskripsi.text,
-      "id_kategori": selectedKategori.toString(),
-    };
-
-    final res = await ApiService.updateBook(widget.book["id"], data);
+      "id_kategori": selectedKategori,
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(res["message"])),
@@ -86,72 +72,56 @@ class _BookEditPageState extends State<BookEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Edit Buku"),
-        centerTitle: true,
-      ),
-      body: kategoriList.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: formKey,
-                child: ListView(
-                  children: [
-                    _field(judul, "Judul", Icons.title),
-                    _field(penulis, "Penulis", Icons.person),
-                    _field(penerbit, "Penerbit", Icons.business),
-                    _field(tahun, "Tahun", Icons.calendar_today),
-
-                    // ======== DROPDOWN KATEGORI ========
-                    DropdownButtonFormField(
-                      value: selectedKategori,
-                      decoration: const InputDecoration(
-                        labelText: "Kategori",
-                        border: OutlineInputBorder(),
-                      ),
-                      items: kategoriList.map((kategori) {
-                        return DropdownMenuItem(
-                          value: kategori["id"].toString(),
-                          child: Text(kategori["nama_kategori"]),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedKategori = value.toString();
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    _field(deskripsi, "Deskripsi", Icons.description, maxLine: 4),
-
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: loading ? null : updateBook,
-                      child: loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Update Buku"),
-                    ),
-                  ],
-                ),
+      appBar: AppBar(title: const Text("Edit Buku")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: formKey,
+          child: ListView(
+            children: [
+              field(judul, "Judul", Icons.title),
+              field(penulis, "Penulis", Icons.person),
+              field(penerbit, "Penerbit", Icons.store),
+              field(tahun, "Tahun", Icons.calendar_month),
+              DropdownButtonFormField(
+                value: selectedKategori,
+                decoration: const InputDecoration(
+                    labelText: "Kategori", border: OutlineInputBorder()),
+                items: kategoriList.map((kategori) {
+                  return DropdownMenuItem(
+                    value: kategori["id"].toString(),
+                    child: Text(kategori["nama_kategori"]),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => selectedKategori = v),
               ),
-            ),
+              const SizedBox(height: 20),
+              field(deskripsi, "Deskripsi", Icons.description, maxLines: 4),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: loading ? null : updateBook,
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Update"),
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _field(TextEditingController c, String label, IconData icon,
-      {int maxLine = 1}) {
+  Widget field(TextEditingController c, String label, IconData icon,
+      {int maxLines = 1}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
         controller: c,
-        maxLines: maxLine,
+        maxLines: maxLines,
         decoration: InputDecoration(
-          labelText: label,
           prefixIcon: Icon(icon),
-          border: OutlineInputBorder(),
+          labelText: label,
+          border: const OutlineInputBorder(),
         ),
         validator: (v) => v!.isEmpty ? "$label wajib diisi" : null,
       ),
