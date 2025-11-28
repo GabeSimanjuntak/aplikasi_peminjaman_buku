@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'register_page.dart';
 import 'admin_dashboard.dart';
-import 'user_dashboard.dart';
+import 'user/user_dashboard.dart';
 import 'forgot_password_email_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -119,10 +119,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     await prefs.setString("token", response["token"]);
     await prefs.setInt("role_id", response["user"]["role_id"]);
     await prefs.setInt("user_id", response["user"]["id"]);
+    await prefs.setString("nama", response["user"]["nama"]); 
+    await prefs.setString("foto", response["user"]["foto"]);
   }
 
   void _redirectUser(int roleId) {
-    final page = roleId == 1 ? const AdminDashboard() : UserDashboard();
+    final page = roleId == 1 
+    ? const AdminDashboard() 
+    : UserDashboardPage();
     
     Navigator.pushReplacement(
       context,

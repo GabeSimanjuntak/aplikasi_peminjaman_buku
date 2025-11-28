@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
-import 'book_create_page.dart';
-import 'book_edit_page.dart';
 
 class BookListPage extends StatefulWidget {
-  const BookListPage({super.key});
+  final int? userId;
+  const BookListPage({Key? key, this.userId}) : super(key: key);
 
   @override
   State<BookListPage> createState() => _BookListPageState();
@@ -13,7 +12,7 @@ class BookListPage extends StatefulWidget {
 
 class _BookListPageState extends State<BookListPage> {
   bool loading = true;
-  List books = [];
+  List<dynamic> books = [];
 
   @override
   void initState() {
@@ -22,81 +21,86 @@ class _BookListPageState extends State<BookListPage> {
   }
 
   Future<void> loadBooks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-
-    final data = await ApiService.getBooks();
-
-    setState(() {
-      books = data;
-      loading = false;
-    });
+    setState(() => loading = true);
+    try {
+      final data = await ApiService.getBooks();
+      setState(() {
+        books = data;
+      });
+    } catch (e) {
+      // ignore errors for now
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
-  Future<void> deleteBook(int id) async {
-    final res = await ApiService.deleteBook(id);
+  Future<void> pinjamBuku(int idBuku) async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = widget.userId ?? prefs.getInt("user_id");
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User ID tidak ditemukan")),
+      );
+      return;
+    }
+
+    final body = {
+      "id_user": uid.toString(),
+      "id_buku": idBuku.toString(),
+      "tgl_pinjam": DateTime.now().toString().substring(0, 10),
+    };
+
+    final res = await ApiService.createPeminjaman(body);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(res["message"] ?? "Gagal menghapus"),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(res["message"] ?? "Peminjaman: respon tidak diketahui")),
     );
 
-    loadBooks();
+    await loadBooks();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Daftar Buku"),
-        centerTitle: true,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const BookCreatePage()));
-          loadBooks();
-        },
-        child: const Icon(Icons.add),
-      ),
+      appBar: AppBar(title: const Text("Daftar Buku")),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: books.length,
-              itemBuilder: (context, i) {
-                final b = books[i];
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    title: Text(b["judul"]),
-                    subtitle: Text("Penulis: ${b["penulis"]}"),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BookEditPage(book: b),
-                              ),
-                            );
-                            loadBooks();
-                          },
+          : books.isEmpty
+              ? const Center(child: Text("Tidak ada buku"))
+              : RefreshIndicator(
+                  onRefresh: loadBooks,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: books.length,
+                    itemBuilder: (context, i) {
+                      final b = books[i];
+                      final judul = b['judul'] ?? "-";
+                      final penulis = b['penulis'] ?? "-";
+                      final stok = (b['stok'] ?? 0);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          title: Text(judul),
+                          subtitle: Text("Penulis: $penulis\nStok: $stok"),
+                          isThreeLine: true,
+                          trailing: stok > 0
+                              ? ElevatedButton(
+                                  onPressed: () => pinjamBuku(b['id']),
+                                  child: const Text("Pinjam"),
+                                )
+                              : Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade300,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text("Stok Habis", style: TextStyle(color: Colors.white)),
+                                ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => deleteBook(b["id"]),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+                ),
     );
   }
 }
