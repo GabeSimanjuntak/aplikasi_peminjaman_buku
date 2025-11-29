@@ -308,4 +308,114 @@ class ApiService {
       throw Exception("Gagal mengambil history peminjaman");
     }
   }
+// ========================== PENGERJAAN AIRIN ===================================
+  
+  // [USER] Ambil daftar buku untuk user
+  static Future<List<dynamic>> getBooksUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/buku-user"), // Sesuai route Laravel: Route::get('/buku-user', ...)
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json["data"] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  // [USER] Ambil history peminjaman user
+  static Future<List<dynamic>> getLoanHistoryUser(int userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/riwayat/user/$userId"), // Sesuai route Laravel
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json["data"] ?? [];
+    } else {
+      return [];
+    }
+  }
+
+  // [USER] Get User Profile
+  static Future<Map<String, dynamic>> getUserProfile(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/profile/$id"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)["data"];
+    } else {
+      throw Exception("Gagal mengambil profil");
+    }
+  }
+
+  // [USER] Update Photo Profile
+  static Future<bool> updateProfile({
+    required int id,
+    String? nama,
+    String? email,
+    String? username,
+    String? filePath, // Path foto dari galeri
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    // Gunakan MultipartRequest karena ada potensi upload file
+    var request = http.MultipartRequest('POST', Uri.parse("$baseUrl/profile/update"));
+
+    // Header Auth
+    request.headers.addAll({
+      "Authorization": "Bearer $token",
+      "Accept": "application/json",
+    });
+
+    // Masukkan data teks jika ada
+    if (nama != null) request.fields['nama'] = nama;
+    if (email != null) request.fields['email'] = email;
+    if (username != null) request.fields['username'] = username;
+
+    // Masukkan file jika ada
+    if (filePath != null) {
+      // PENTING: Key harus 'foto', sesuai dengan $request->file('foto') di Laravel
+      request.files.add(await http.MultipartFile.fromPath('foto', filePath));
+    }
+
+    try {
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print("Gagal update: $responseBody"); // Untuk debugging
+        return false;
+      }
+    } catch (e) {
+      print("Error API: $e");
+      return false;
+    }
+  }
 }

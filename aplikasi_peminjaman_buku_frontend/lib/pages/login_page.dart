@@ -1,9 +1,9 @@
+import 'package:aplikasi_peminjaman_buku_frontend/pages/user/user_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'register_page.dart';
 import 'admin_dashboard.dart';
-import 'user_dashboard.dart';
 import 'forgot_password_email_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   void _redirectUser(int roleId) {
-    final page = roleId == 1 ? const AdminDashboard() : UserDashboard();
+    final page = roleId == 1 ? const AdminDashboard() : UserDashboardPage();
     
     Navigator.pushReplacement(
       context,
