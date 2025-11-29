@@ -13,7 +13,6 @@ class AuthController extends Controller
     // ============================================================
     // REGISTER USER
     // ============================================================
-    
     public function register(Request $request)
     {
         $request->validate([
