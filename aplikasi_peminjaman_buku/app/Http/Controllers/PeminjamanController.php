@@ -11,13 +11,25 @@ class PeminjamanController extends Controller
     // GET semua peminjaman
     public function index()
     {
-        $data = Peminjaman::with(['buku', 'user'])->get();
+        $data = Peminjaman::join('buku', 'peminjaman.id_buku', '=', 'buku.id')
+            ->join('users', 'peminjaman.id_user', '=', 'users.id')
+            ->select(
+                'peminjaman.id as id_peminjaman',
+                'buku.judul as judul_buku',
+                'users.nama as nama_user',
+                'peminjaman.tanggal_pinjam',
+                'peminjaman.tanggal_jatuh_tempo',
+                'peminjaman.status_pinjam'
+            )
+            ->get();
 
         return response()->json([
-            'success' => true,
-            'data' => $data
+            "success" => true,
+            "data" => $data
         ]);
     }
+
+
 
     // POST peminjaman (pinjam buku)
     public function store(Request $request)
@@ -93,4 +105,22 @@ class PeminjamanController extends Controller
             'data' => $data
         ]);
     }
+
+    // APPROVE oleh admin
+    public function approve($id)
+    {
+        $p = Peminjaman::find($id);
+
+        if (!$p) {
+            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan']);
+        }
+
+        $p->status_pinjam = 'aktif';
+        $p->tanggal_pinjam = now();
+        $p->save();
+
+        return response()->json(['success' => true, 'message' => 'Peminjaman disetujui']);
+    }
+
+
 }

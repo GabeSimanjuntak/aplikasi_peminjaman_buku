@@ -71,6 +71,13 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 
     // Pengembalian buku
     Route::post('/pengembalian', [PengembalianController::class, 'store']);
+    Route::get('/pengembalian', [PengembalianController::class, 'index']);
+    
+    //Peminjaman buku
+    Route::get('/peminjaman', [PeminjamanController::class, 'index']);
+    Route::put('/peminjaman/{id}/approve', [PeminjamanController::class, 'approve']);
+    Route::post('/pengembalian', [PengembalianController::class, 'store']);
+    Route::put('/peminjaman/{id}/pengembalian', [PeminjamanController::class, 'pengembalian']);
 
     // Semua riwayat
     Route::get('/riwayat', [RiwayatController::class, 'index']);

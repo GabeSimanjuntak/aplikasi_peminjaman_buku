@@ -15,7 +15,6 @@ class PengembalianController extends Controller
             'id_peminjaman' => 'required|exists:peminjaman,id'
         ]);
 
-        // Ambil data peminjaman
         $pinjam = Peminjaman::find($request->id_peminjaman);
 
         if ($pinjam->status_pinjam !== 'aktif') {
@@ -25,15 +24,25 @@ class PengembalianController extends Controller
             ], 400);
         }
 
+        // Cek keterlambatan
+        $tanggalSekarang = date('Y-m-d');
+        $statusKembali = ($tanggalSekarang > $pinjam->tanggal_jatuh_tempo) ? 'terlambat' : 'tepat waktu';
+
         // Simpan pengembalian
         $kembali = Pengembalian::create([
             'id_peminjaman' => $request->id_peminjaman,
-            'tanggal_kembali' => date('Y-m-d')
+            'tanggal_kembali' => $tanggalSekarang,
+            'status_pengembalian' => $statusKembali
         ]);
 
-        // Trigger otomatis mengubah:
-        // - status buku -> tersedia
-        // - status peminjaman -> selesai
+        // Update status peminjaman menjadi selesai
+        $pinjam->status_pinjam = 'selesai';
+        $pinjam->save();
+
+        // Update status buku menjadi tersedia
+        $buku = $pinjam->buku;
+        $buku->status = 'tersedia';
+        $buku->save();
 
         return response()->json([
             'success' => true,
@@ -41,4 +50,18 @@ class PengembalianController extends Controller
             'data' => $kembali
         ]);
     }
+
+    public function index()
+    {
+        $data = Peminjaman::with(['buku', 'user'])
+            ->where('status_pinjam', 'selesai')
+            ->orderBy('tanggal_kembali', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
 }

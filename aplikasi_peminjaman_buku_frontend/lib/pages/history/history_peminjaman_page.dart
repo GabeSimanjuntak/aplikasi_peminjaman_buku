@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'history_detail_peminjaman_page.dart'; // pastikan path sesuai
 
 class HistoryPeminjamanPage extends StatefulWidget {
   const HistoryPeminjamanPage({super.key});
@@ -9,7 +10,7 @@ class HistoryPeminjamanPage extends StatefulWidget {
 }
 
 class _HistoryPeminjamanPageState extends State<HistoryPeminjamanPage> {
-  List history = [];
+  List<dynamic> history = [];
   bool isLoading = true;
 
   @override
@@ -19,8 +20,9 @@ class _HistoryPeminjamanPageState extends State<HistoryPeminjamanPage> {
   }
 
   Future<void> loadHistory() async {
+    setState(() => isLoading = true);
     try {
-      final data = await ApiService.getHistory();
+      final data = await ApiService.getHistoryAdmin(); // khusus admin
       setState(() {
         history = data;
         isLoading = false;
@@ -28,7 +30,7 @@ class _HistoryPeminjamanPageState extends State<HistoryPeminjamanPage> {
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal mengambil data: $e")),
+        SnackBar(content: Text("Gagal mengambil data history: $e")),
       );
     }
   }
@@ -48,7 +50,7 @@ class _HistoryPeminjamanPageState extends State<HistoryPeminjamanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("History Peminjaman"),
+        title: const Text("History Peminjaman Admin"),
         centerTitle: true,
       ),
       body: isLoading
@@ -61,47 +63,66 @@ class _HistoryPeminjamanPageState extends State<HistoryPeminjamanPage> {
                   itemBuilder: (context, index) {
                     final item = history[index];
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item["judul_buku"] ?? "-",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text("Peminjam : ${item["nama_user"]}"),
-                            Text("Tgl Pinjam : ${item["tanggal_pinjam"]}"),
-                            Text("Jatuh Tempo : ${item["tanggal_jatuh_tempo"]}"),
-                            Text("Tgl Kembali : ${item["tanggal_kembali"] ?? '-'}"),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 4, horizontal: 10),
-                              decoration: BoxDecoration(
-                                color: _statusColor(item["status_pinjam"])
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: _statusColor(item["status_pinjam"]),
-                                ),
-                              ),
-                              child: Text(
-                                item["status_pinjam"].toUpperCase(),
-                                style: TextStyle(
-                                  color: _statusColor(item["status_pinjam"]),
+                    return InkWell(
+                      onTap: () {
+                        // Navigasi ke halaman detail
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                HistoryDetailPeminjamanPage(item: item),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item["judul_buku"] ?? "-",
+                                style: const TextStyle(
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            )
-                          ],
+                              const SizedBox(height: 4),
+                              Text("Peminjam : ${item["nama_user"] ?? '-'}"),
+                              Text(
+                                  "Tgl Pinjam : ${item["tanggal_pinjam"] ?? '-'}"),
+                              Text(
+                                  "Jatuh Tempo : ${item["tanggal_jatuh_tempo"] ?? '-'}"),
+                              Text(
+                                  "Tgl Kembali : ${item["tanggal_kembali"] ?? '-'}"),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: _statusColor(
+                                          item["status_pinjam"] ?? 'aktif')
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _statusColor(
+                                        item["status_pinjam"] ?? 'aktif'),
+                                  ),
+                                ),
+                                child: Text(
+                                  (item["status_pinjam"] ?? 'aktif')
+                                      .toUpperCase(),
+                                  style: TextStyle(
+                                    color: _statusColor(
+                                        item["status_pinjam"] ?? 'aktif'),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
