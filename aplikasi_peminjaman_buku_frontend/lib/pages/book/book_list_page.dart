@@ -22,9 +22,6 @@ class _BookListPageState extends State<BookListPage> {
   }
 
   Future<void> loadBooks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-
     final data = await ApiService.getBooks();
 
     setState(() {
@@ -55,8 +52,10 @@ class _BookListPageState extends State<BookListPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const BookCreatePage()));
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BookCreatePage()),
+          );
           loadBooks();
         },
         child: const Icon(Icons.add),
@@ -71,7 +70,9 @@ class _BookListPageState extends State<BookListPage> {
                   margin: const EdgeInsets.all(10),
                   child: ListTile(
                     title: Text(b["judul"]),
-                    subtitle: Text("Penulis: ${b["penulis"]}"),
+                    subtitle: Text(
+                      "Penulis: ${b["penulis"]}\nStok: ${b["stok"]}",
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

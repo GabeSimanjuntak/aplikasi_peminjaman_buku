@@ -10,24 +10,22 @@ class BukuController extends Controller
     // GET semua buku
     public function index()
     {
-        $buku = Buku::with('kategori')->get();
-
         return response()->json([
             'success' => true,
-            'data' => $buku
+            'data' => Buku::with('kategori')->get()
         ]);
     }
 
     // GET detail buku
     public function show($id)
     {
-        $buku = Buku::with('kategori')->find(id: $id);
+        $buku = Buku::with('kategori')->find($id);
 
         if (!$buku) {
             return response()->json([
                 'success' => false,
                 'message' => 'Buku tidak ditemukan'
-            ], status: 404);
+            ], 404);
         }
 
         return response()->json([
@@ -40,12 +38,10 @@ class BukuController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'judul' => 'required|string|max:150',
-            'penulis' => 'nullable|string|max:100',
-            'penerbit' => 'nullable|string|max:100',
-            'tahun' => 'nullable|string|max:10',
-            'deskripsi' => 'nullable|string',
-            'id_kategori' => 'nullable|exists:kategori_buku,id',
+            'judul' => 'required',
+            'penulis' => 'required',
+            'id_kategori' => 'required|integer',
+            'stok' => 'required|integer|min:0',
         ]);
 
         $buku = Buku::create([
@@ -55,6 +51,7 @@ class BukuController extends Controller
             'tahun' => $request->tahun,
             'deskripsi' => $request->deskripsi,
             'id_kategori' => $request->id_kategori,
+            'stok' => $request->stok,
             'status' => 'tersedia'
         ]);
 
@@ -62,7 +59,7 @@ class BukuController extends Controller
             'success' => true,
             'message' => 'Buku berhasil ditambahkan',
             'data' => $buku
-        ], 201);
+        ]);
     }
 
     // PUT update buku
@@ -77,7 +74,15 @@ class BukuController extends Controller
             ], 404);
         }
 
-        $buku->update($request->all());
+        $buku->update([
+            'judul' => $request->judul,
+            'penulis' => $request->penulis,
+            'penerbit' => $request->penerbit,
+            'tahun' => $request->tahun,
+            'deskripsi' => $request->deskripsi,
+            'id_kategori' => $request->id_kategori,
+            'stok' => $request->stok,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -98,17 +103,7 @@ class BukuController extends Controller
             ], 404);
         }
 
-        // Hapus buku
         $buku->delete();
-
-        // RESET urutan ID agar kembali mengikuti ID terakhir
-        \DB::statement("
-            SELECT setval(
-                pg_get_serial_sequence('buku', 'id'),
-                COALESCE((SELECT MAX(id) FROM buku), 1),
-                false
-            );
-        ");
 
         return response()->json([
             'success' => true,
@@ -116,4 +111,25 @@ class BukuController extends Controller
         ]);
     }
 
+    // GET buku serupa berdasarkan kategori
+    public function bukuSerupa($id)
+    {
+        $buku = Buku::find($id);
+
+        if (!$buku) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku tidak ditemukan'
+            ], 404);
+        }
+
+        $serupa = Buku::where('id_kategori', $buku->id_kategori)
+            ->where('id', '!=', $id)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $serupa
+        ]);
+    }
 }

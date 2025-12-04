@@ -17,6 +17,7 @@ class _BookEditPageState extends State<BookEditPage> {
   late TextEditingController penulis;
   late TextEditingController penerbit;
   late TextEditingController tahun;
+  late TextEditingController stok;
   late TextEditingController deskripsi;
 
   List kategoriList = [];
@@ -31,9 +32,10 @@ class _BookEditPageState extends State<BookEditPage> {
     penulis = TextEditingController(text: widget.book["penulis"]);
     penerbit = TextEditingController(text: widget.book["penerbit"]);
     tahun = TextEditingController(text: widget.book["tahun"].toString());
+    stok = TextEditingController(text: widget.book["stok"].toString());
     deskripsi = TextEditingController(text: widget.book["deskripsi"]);
-    selectedKategori = widget.book["id_kategori"].toString();
 
+    selectedKategori = widget.book["id_kategori"].toString();
     loadKategori();
   }
 
@@ -51,14 +53,21 @@ class _BookEditPageState extends State<BookEditPage> {
 
     setState(() => loading = true);
 
-    final res = await ApiService.updateBook(widget.book["id"], {
-      "judul": judul.text,
-      "penulis": penulis.text,
-      "penerbit": penerbit.text,
-      "tahun": tahun.text,
-      "deskripsi": deskripsi.text,
-      "id_kategori": selectedKategori,
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await ApiService.updateBook(
+      widget.book["id"],
+      {
+        "judul": judul.text,
+        "penulis": penulis.text,
+        "penerbit": penerbit.text,
+        "tahun": tahun.text,
+        "stok": stok.text,
+        "deskripsi": deskripsi.text,
+        "id_kategori": selectedKategori,
+      },
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(res["message"])),
@@ -83,6 +92,7 @@ class _BookEditPageState extends State<BookEditPage> {
               field(penulis, "Penulis", Icons.person),
               field(penerbit, "Penerbit", Icons.store),
               field(tahun, "Tahun", Icons.calendar_month),
+              field(stok, "Stok", Icons.numbers),
               DropdownButtonFormField(
                 value: selectedKategori,
                 decoration: const InputDecoration(

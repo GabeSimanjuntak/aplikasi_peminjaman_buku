@@ -1,1 +1,0 @@
-User Login -> Cari Buku -> Klik Pinjam -> Pilih Tanggal -> Sukses -> Cek Tab Pinjaman -> Muncul status "Sedang Dipinjam".

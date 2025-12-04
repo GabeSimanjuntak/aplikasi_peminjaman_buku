@@ -1,4 +1,4 @@
-    CREATE DATABASE aplikasi_peminjaman_buku;
+CREATE DATABASE aplikasi_peminjaman_buku;
     \c aplikasi_peminjaman_buku;
 
     CREATE TABLE roles (
@@ -127,3 +127,49 @@ ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL;
     TRUNCATE TABLE roles RESTART IDENTITY CASCADE;
 
     DELETE FROM users;
+
+
+	/Modifikasi db/
+	-- 1. Tambah kolom stok
+ALTER TABLE buku
+ADD COLUMN stok_total INT DEFAULT 1,
+ADD COLUMN stok_tersedia INT DEFAULT 1;
+
+-- 2. Ubah cek status (opsional) — hapus constraint chk_status_valid karena kita pakai stok
+ALTER TABLE buku DROP CONSTRAINT IF EXISTS chk_status_valid;
+
+-- 3. Tambah status baru di peminjaman: 'pending' saat request dibuat
+ALTER TABLE peminjaman ALTER COLUMN status_pinjam TYPE VARCHAR(20);
+-- (constraint baru)
+ALTER TABLE peminjaman DROP CONSTRAINT IF EXISTS chk_status_pinjam_valid;
+ALTER TABLE peminjaman ADD CONSTRAINT chk_status_pinjam_valid
+CHECK (status_pinjam IN ('pending', 'aktif', 'selesai', 'terlambat', 'ditolak'));
+
+-- 4. Hapus/modifikasi trigger lama yang meng-set status buku 'dipinjam' / 'tersedia'
+DROP TRIGGER IF EXISTS trg_set_status_buku_dipinjam ON peminjaman;
+DROP FUNCTION IF EXISTS set_status_buku_dipinjam();
+
+DROP TRIGGER IF EXISTS trg_set_status_buku_dikembalikan ON pengembalian;
+DROP FUNCTION IF EXISTS set_status_buku_dikembalikan();
+
+-- 5. (Opsional) Index untuk pencarian cepat
+CREATE INDEX IF NOT EXISTS idx_buku_judul ON buku(judul);
+
+ALTER TABLE users ADD COLUMN nim VARCHAR(30);
+
+ALTER TABLE users 
+ALTER COLUMN nim SET NOT NULL;
+
+ALTER TABLE users 
+ALTER COLUMN nim DROP NOT NULL;
+
+ALTER TABLE users 
+DROP CONSTRAINT users_nim_unique;
+
+ALTER TABLE users 
+ADD CONSTRAINT users_nim_unique UNIQUE(nim);
+
+ALTER TABLE users 
+ADD COLUMN prodi VARCHAR(100) NULL;
+
+

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,55 +7,54 @@ class ApiService {
   static const String baseUrl = "http://10.0.2.2:8000/api";
   static String? authToken;
 
-  // Load token dari SharedPreferences
+  // Load token
   static Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
     authToken = prefs.getString("token");
   }
 
-  // =============================
-  // LOGIN
-  // =============================
-  static Future<Map<String, dynamic>> login(String username, String password) async {
+  // ============================= LOGIN =============================
+  static Future<Map<String, dynamic>> login(String login, String password) async {
     final response = await http.post(
       Uri.parse("$baseUrl/login"),
       headers: {"Accept": "application/json"},
       body: {
-        "username": username,
+        "login": login,
         "password": password,
       },
     );
     return json.decode(response.body);
   }
 
-  // =============================
-  // REGISTER
-  // =============================
-    static Future<Map<String, dynamic>> register({
+  // ============================= REGISTER =============================
+  static Future<dynamic> register({
     required String nama,
     required String email,
-    required String username,
+    required String nim,
+    required String prodi,
     required String password,
     required int roleId,
   }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/register"),
-      headers: {"Accept": "application/json"},
-      body: {
-        "nama": nama,
-        "email": email,
-        "username": username,
-        "password": password,
-                "role_id": roleId.toString(),
-      },
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        body: {
+          'nama': nama,
+          'email': email,
+          'nim': nim,
+          'prodi': prodi,
+          'password': password,
+          'role_id': roleId.toString(),
+        },
+      );
 
-    return json.decode(response.body);
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {"success": false, "message": e.toString()};
+    }
   }
 
-  // =============================
-  // LOGOUT
-  // =============================
+  // ============================= LOGOUT =============================
   static Future<Map<String, dynamic>> logout(String token) async {
     final response = await http.post(
       Uri.parse("$baseUrl/logout"),
@@ -67,7 +67,7 @@ class ApiService {
     return json.decode(response.body);
   }
 
-    // SEND OTP
+  // ======================== OTP ============================
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     final res = await http.post(
       Uri.parse("$baseUrl/forgot-password"),
@@ -76,7 +76,6 @@ class ApiService {
     return json.decode(res.body);
   }
 
-  // VERIFY OTP
   static Future<Map<String, dynamic>> verifyOtp({
     required String email,
     required String otp,
@@ -88,7 +87,6 @@ class ApiService {
     return json.decode(res.body);
   }
 
-  // RESET PASSWORD
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String password,
@@ -103,11 +101,11 @@ class ApiService {
   // ======================= BUKU CRUD =======================
 
   static Future<List<dynamic>> getBooks() async {
-        final prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final response = await http.get(
-      Uri.parse("$baseUrl/buku"),      // ← perbaikan di sini
+      Uri.parse("$baseUrl/buku"),
       headers: {
         "Authorization": "Bearer $token",
         "Accept": "application/json",
@@ -125,7 +123,7 @@ class ApiService {
         "Authorization": "Bearer $token",
         "Accept": "application/json",
       },
-      body: data, // ← jangan jsonEncode!
+      body: data, 
     );
 
     return jsonDecode(res.body);
@@ -162,9 +160,13 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+    static Future<List<dynamic>> getBukuSerupa(int id) async {
+    final res = await http.get(Uri.parse("$baseUrl/buku-serupa/$id"));
+    return jsonDecode(res.body)["data"];
+  }
+
   // ======================= KATEGORI CRUD =======================
 
-  // GET ALL KATEGORI
   static Future<List<dynamic>> getKategori(String token) async {
     final response = await http.get(
       Uri.parse("$baseUrl/kategori"),
@@ -186,7 +188,7 @@ class ApiService {
       headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": "Bearer $token",   // ← INI YANG WAJIB!
+        "Authorization": "Bearer $token",
       },
       body: jsonEncode(data),
     );
@@ -223,7 +225,7 @@ class ApiService {
     return json.decode(response.body);
   }
 
-  // ======================= USERS (untuk peminjaman) =======================
+  // ======================= USERS =======================
 
   static Future<List<dynamic>> getUsers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -278,7 +280,6 @@ class ApiService {
     return [];
   }
 
-
   static Future<Map<String, dynamic>> kembalikanBuku(int idPeminjaman) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
@@ -297,12 +298,14 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  // ======================= HISTORY =======================
+
   static Future<List<dynamic>> getHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final response = await http.get(
-      Uri.parse("$baseUrl/pengembalian"), // pastikan endpoint ini mengembalikan semua history
+      Uri.parse("$baseUrl/pengembalian"),
       headers: {
         "Accept": "application/json",
         "Authorization": "Bearer $token",
@@ -317,40 +320,38 @@ class ApiService {
     }
   }
 
-  // Ambil semua riwayat peminjaman untuk admin
-static Future<List<dynamic>> getHistoryAdmin() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString("token");
+  static Future<List<dynamic>> getHistoryAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-  final response = await http.get(
-    Uri.parse("$baseUrl/riwayat"), // endpoint RiwayatController@index
-    headers: {
-      "Accept": "application/json",
-      "Authorization": "Bearer $token",
-    },
-  );
+    final response = await http.get(
+      Uri.parse("$baseUrl/riwayat"),
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
 
-  if (response.statusCode == 200) {
-    final jsonData = jsonDecode(response.body);
-    if (jsonData['success'] == true) {
-      return jsonData['data'] ?? [];
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      if (jsonData['success'] == true) {
+        return jsonData['data'] ?? [];
+      } else {
+        return [];
+      }
     } else {
-      return [];
+      throw Exception('Gagal mengambil data history admin');
     }
-  } else {
-    throw Exception('Gagal mengambil data history admin');
   }
-}
 
-// ========================== PENGERJAAN AIRIN ===================================
-  
-  // [USER] Ambil daftar buku untuk user
+  // ======================= USER SIDE =======================
+
   static Future<List<dynamic>> getBooksUser() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final response = await http.get(
-      Uri.parse("$baseUrl/buku-user"), // Sesuai route Laravel: Route::get('/buku-user', ...)
+      Uri.parse("$baseUrl/buku-user"),
       headers: {
         "Authorization": "Bearer $token",
         "Accept": "application/json",
@@ -365,13 +366,12 @@ static Future<List<dynamic>> getHistoryAdmin() async {
     }
   }
 
-  // [USER] Ambil history peminjaman user
   static Future<List<dynamic>> getLoanHistoryUser(int userId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     final response = await http.get(
-      Uri.parse("$baseUrl/riwayat/user/$userId"), // Sesuai route Laravel
+      Uri.parse("$baseUrl/riwayat/user/$userId"),
       headers: {
         "Authorization": "Bearer $token",
         "Accept": "application/json",
@@ -386,7 +386,6 @@ static Future<List<dynamic>> getHistoryAdmin() async {
     }
   }
 
-  // [USER] Get User Profile
   static Future<Map<String, dynamic>> getUserProfile(int id) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
@@ -400,178 +399,101 @@ static Future<List<dynamic>> getHistoryAdmin() async {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body)["data"];
+      final resJson = jsonDecode(response.body);
+      return resJson.containsKey("data") ? resJson["data"] : resJson;
     } else {
       throw Exception("Gagal mengambil profil");
     }
   }
 
-  // [USER] Update Photo Profile
-  static Future<bool> updateProfile({
-    required int id,
-    String? nama,
-    String? email,
-    String? username,
-    String? filePath, // Path foto dari galeri
-  }) async {
+  // ============================= APPROVE =============================
+
+  static Future<bool> approvePeminjaman(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token") ?? "";
+
+      final url = Uri.parse("$baseUrl/peminjaman/$id/approve");
+      final response = await http.put(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final resBody = jsonDecode(response.body);
+        return resBody['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print("Exception approvePeminjaman: $e");
+      return false;
+    }
+  }
+
+  // ============================= UPLOAD FOTO PROFIL =============================
+
+  static Future<String> uploadProfilePhoto(int userId, File photoFile) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
-    // Gunakan MultipartRequest karena ada potensi upload file
-    var request = http.MultipartRequest('POST', Uri.parse("$baseUrl/profile/update"));
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse("$baseUrl/profile/$userId/update-photo"),
+    );
 
-    // Header Auth
     request.headers.addAll({
       "Authorization": "Bearer $token",
       "Accept": "application/json",
     });
 
-    // Masukkan data teks jika ada
-    if (nama != null) request.fields['nama'] = nama;
-    if (email != null) request.fields['email'] = email;
-    if (username != null) request.fields['username'] = username;
+    request.files.add(
+      await http.MultipartFile.fromPath("foto", photoFile.path),
+    );
 
-    // Masukkan file jika ada
-    if (filePath != null) {
-      // PENTING: Key harus 'foto', sesuai dengan $request->file('foto') di Laravel
-      request.files.add(await http.MultipartFile.fromPath('foto', filePath));
-    }
+    var response = await request.send();
+    var body = await response.stream.bytesToString();
 
-    try {
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-      
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        print("Gagal update: $responseBody"); // Untuk debugging
-        return false;
-      }
-    } catch (e) {
-      print("Error API: $e");
-      return false;
+    final jsonRes = jsonDecode(body);
+
+    if (jsonRes["success"] == true) {
+      return jsonRes["foto_url"]; // pastikan backend mengirim foto_url
+    } else {
+      throw Exception(jsonRes["message"] ?? "Upload gagal");
     }
   }
 
-
-// ================================
-// APPROVE PEMINJAMAN (ADMIN)
-// ================================
-// static Future<Map<String, dynamic>> approvePeminjaman(int idPeminjaman) async {
-//   final prefs = await SharedPreferences.getInstance();
-//   final token = prefs.getString("token");
-
-//   final url = Uri.parse("$baseUrl/peminjaman/$idPeminjaman/approve");
-
-//   final response = await http.put(
-//     url,
-//     headers: {
-//       "Accept": "application/json",
-//       "Authorization": "Bearer $token"
-//     },
-//   );
-
-//   final jsonData = jsonDecode(response.body);
-
-//   return {
-//     "success": jsonData["success"] ?? false,
-//     "message": jsonData["message"] ?? "Terjadi kesalahan"
-//   };
-// }
-
-
-
-// Kembalikan buku
-// static Future<Map<String, dynamic>> kembalikanBuku(int idPeminjaman) async {
-//   final url = Uri.parse("$baseUrl/pengembalian");
-
-//   final response = await http.post(
-//     url,
-//     body: {
-//       "id_peminjaman": idPeminjaman.toString(),
-//     },
-//   );
-
-//   return jsonDecode(response.body);
-// }
-
-
-static Future<List<dynamic>> getSemuaPeminjaman() async {
-  final url = Uri.parse("$baseUrl/peminjaman");
-  final response = await http.get(url);
-
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return data["data"];
+  static Future<Map<String, dynamic>> refreshUser(int userId) async {
+    return await getUserProfile(userId);
   }
-  return [];
-}
 
-// ==========================
-  // GET Semua Data Peminjaman
-  // ==========================
-  static Future<List<dynamic>> getPeminjaman() async {
+  static Future<Map<String, dynamic>> updateUserPhoto({
+    required int userId,
+    required File newPhoto,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
-    final response = await http.get(
-      Uri.parse("$baseUrl/peminjaman"),
-      headers: {
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      },
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse("$baseUrl/user/update-photo/$userId"),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body["data"];
-    } else {
-      throw Exception("Gagal load peminjaman");
-    }
-  }
+    request.headers.addAll({
+      "Authorization": "Bearer $token",
+      "Accept": "application/json",
+    });
 
-  // ==========================
-// APPROVE PEMINJAMAN
-// ==========================
-static Future<bool> approvePeminjaman(int id) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token") ?? "";
-
-    if (token.isEmpty) {
-      print("Token tidak tersedia");
-      return false;
-    }
-
-    final url = Uri.parse("$baseUrl/peminjaman/$id/approve");
-    final response = await http.put(
-      url,
-      headers: {
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      },
+    request.files.add(
+      await http.MultipartFile.fromPath("photo", newPhoto.path),
     );
 
-    print("STATUS CODE: ${response.statusCode}");
-    print("BODY: ${response.body}");
+    final response = await request.send();
+    final body = jsonDecode(await response.stream.bytesToString());
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final resBody = jsonDecode(response.body);
-      // Jika API mengirim success field
-      if (resBody['success'] == true) {
-        return true;
-      } else {
-        print("API gagal: ${resBody['message'] ?? 'Unknown error'}");
-        return false;
-      }
-    } else {
-      print("HTTP Error: ${response.statusCode}");
-      return false;
-    }
-  } catch (e) {
-    print("Exception approvePeminjaman: $e");
-    return false;
+    return body;
   }
-}
-
 }

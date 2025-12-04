@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::post('/buku', [BukuController::class, 'store']);
     Route::put('/buku/{id}', [BukuController::class, 'update']);
     Route::delete('/buku/{id}', [BukuController::class, 'destroy']);
+    Route::get('/buku-serupa/{id}', [BukuController::class, 'bukuSerupa']);
 
     // CRUD Kategori
     Route::get('/kategori', [KategoriBukuController::class, 'index']);
@@ -72,7 +73,7 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     // Pengembalian buku
     Route::post('/pengembalian', [PengembalianController::class, 'store']);
     Route::get('/pengembalian', [PengembalianController::class, 'index']);
-    
+
     //Peminjaman buku
     Route::get('/peminjaman', [PeminjamanController::class, 'index']);
     Route::put('/peminjaman/{id}/approve', [PeminjamanController::class, 'approve']);

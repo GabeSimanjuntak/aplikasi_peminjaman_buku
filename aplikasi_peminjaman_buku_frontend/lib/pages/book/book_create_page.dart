@@ -17,6 +17,7 @@ class _BookCreatePageState extends State<BookCreatePage> {
   final penerbit = TextEditingController();
   final tahun = TextEditingController();
   final deskripsi = TextEditingController();
+  final stok = TextEditingController();
 
   List kategoriList = [];
   String? selectedKategori;
@@ -40,9 +41,9 @@ class _BookCreatePageState extends State<BookCreatePage> {
   Future<void> saveBook() async {
     if (!formKey.currentState!.validate()) return;
     if (selectedKategori == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kategori belum dipilih")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Kategori belum dipilih")));
       return;
     }
 
@@ -56,6 +57,7 @@ class _BookCreatePageState extends State<BookCreatePage> {
       "penulis": penulis.text,
       "penerbit": penerbit.text,
       "tahun": tahun.text,
+      "stok": stok.text,
       "deskripsi": deskripsi.text,
       "id_kategori": selectedKategori,
     });
@@ -85,13 +87,16 @@ class _BookCreatePageState extends State<BookCreatePage> {
               field(judul, "Judul", Icons.title),
               field(penulis, "Penulis", Icons.person),
               field(penerbit, "Penerbit", Icons.store),
-              field(tahun, "Tahun", Icons.calendar_month,
-                  type: TextInputType.number),
+              field(tahun, "Tahun", Icons.calendar_month, type: TextInputType.number,),
+              field(stok, "Stok", Icons.inventory, type: TextInputType.number),
+              const SizedBox(height: 20),
 
               DropdownButtonFormField(
                 value: selectedKategori,
                 decoration: const InputDecoration(
-                    labelText: "Kategori", border: OutlineInputBorder()),
+                  labelText: "Kategori",
+                  border: OutlineInputBorder(),
+                ),
                 items: kategoriList.map((k) {
                   return DropdownMenuItem(
                     value: k["id"].toString(),
@@ -111,7 +116,7 @@ class _BookCreatePageState extends State<BookCreatePage> {
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Simpan"),
-              )
+              ),
             ],
           ),
         ),
@@ -119,8 +124,13 @@ class _BookCreatePageState extends State<BookCreatePage> {
     );
   }
 
-  Widget field(TextEditingController c, String label, IconData icon,
-      {int maxLines = 1, TextInputType type = TextInputType.text}) {
+  Widget field(
+    TextEditingController c,
+    String label,
+    IconData icon, {
+    int maxLines = 1,
+    TextInputType type = TextInputType.text,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       child: TextFormField(

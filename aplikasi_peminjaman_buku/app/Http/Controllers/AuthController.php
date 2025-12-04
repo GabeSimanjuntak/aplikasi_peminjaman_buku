@@ -13,107 +13,117 @@ class AuthController extends Controller
     // ============================================================
     // REGISTER USER
     // ============================================================
-    public function register(Request $request)
-    {
-        $request->validate([
-            'nama' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email',
-            'username' => 'required|string|max:50|unique:users,username',
-            'password' => 'required|min:6',
-            'role_id' => 'required|exists:roles,id'
-        ]);
+public function register(Request $request)
+{
+    $request->validate([
+        'nama' => 'required|string|max:100',
+        'email' => 'required|email|unique:users,email',
+        'nim' => 'required|string|max:20|unique:users,nim',
+        'prodi' => 'required|string|max:100',
+        'password' => 'required|min:6',
+    ]);
 
-        $user = User::create([
-            'nama' => $request->nama,
-            'email' => $request->email,
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-            'role_id' => $request->role_id,
-            'foto' => 'default-profile.png' // default foto
-        ]);
+    $roleId = 2;
 
-        // Kirim email konfirmasi
-        try {
-            Mail::raw("
-                Halo {$user->nama},
+    $user = User::create([
+        'nama' => $request->nama,
+        'email' => $request->email,
+        'nim' => $request->nim,
+        'prodi' => $request->prodi,
+        'password' => Hash::make($request->password),
+        'role_id' => $roleId,
+        'foto' => 'default-profile.png'
+    ]);
 
-                Akun Anda berhasil didaftarkan di Aplikasi Peminjaman Buku.
+    // Kirim email konfirmasi
+    try {
+        Mail::raw("
+            Halo {$user->nama},
 
-                Username : {$user->username}
-                Email    : {$user->email}
+            Akun Anda berhasil didaftarkan di sistem.
 
-                Terima kasih telah bergabung!
+            Nama  : {$user->nama}
+            NIM   : {$user->nim}
+            Prodi : {$user->prodi}
+            Email : {$user->email}
 
-            ", function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject('Registrasi Berhasil - Aplikasi Peminjaman Buku');
-            });
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Registrasi berhasil, email gagal dikirim.',
-                'error' => $e->getMessage(),
-                'data' => $user
-            ], 201);
-        }
+            Terima kasih telah bergabung!
 
+        ", function ($message) use ($user) {
+            $message->to($user->email)
+                    ->subject('Registrasi Berhasil');
+        });
+    } catch (\Exception $e) {
         return response()->json([
             'success' => true,
-            'message' => 'Registrasi berhasil! Email konfirmasi telah dikirim.',
+            'message' => 'Registrasi berhasil, tetapi email gagal dikirim.',
+            'error' => $e->getMessage(),
             'data' => $user
         ], 201);
     }
 
+    return response()->json([
+        'success' => true,
+        'message' => 'Registrasi berhasil! Email konfirmasi telah dikirim.',
+        'data' => $user
+    ], 201);
+}
+
     // ============================================================
     // LOGIN USER
     // ============================================================
-    public function login(Request $request)
-    {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required'
-        ]);
+public function login(Request $request)
+{
+    $request->validate([
+        'login' => 'required',     // bisa nama atau nim
+        'password' => 'required'
+    ]);
 
-        $user = User::where('username', $request->username)->first();
+    // Cari berdasarkan nama atau NIM
+    $user = User::where('nama', $request->login)
+                ->orWhere('nim', $request->login)
+                ->first();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Username tidak ditemukan'
-            ], 404);
-        }
-
-        if (!Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Password salah'
-            ], 401);
-        }
-
-        // Token sanctum
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        // FOTO DEFAULT
-        $fotoUrl = $user->foto
-            ? ($user->foto == 'default-profile.png'
-                ? url('default-profile.png')
-                : url('storage/' . $user->foto))
-            : url('default-profile.png');
-
+    if (!$user) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login berhasil',
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'nama' => $user->nama,
-                'username' => $user->username,
-                'email' => $user->email,
-                'role_id' => $user->role_id,
-                'foto' => $fotoUrl
-            ]
-        ], 200);
+            'success' => false,
+            'message' => 'Nama atau NIM tidak ditemukan'
+        ], 404);
     }
+
+    // Cek password
+    if (!Hash::check($request->password, $user->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Password salah'
+        ], 401);
+    }
+
+    // Generate token
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    // Foto URL
+    $fotoUrl = $user->foto
+        ? ($user->foto == 'default-profile.png'
+            ? url('default-profile.png')
+            : url('storage/' . $user->foto))
+        : url('default-profile.png');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login berhasil',
+        'token' => $token,
+        'user' => [
+            'id' => $user->id,
+            'nama' => $user->nama,
+            'nim' => $user->nim,
+            'email' => $user->email,
+            'prodi' => $user->prodi,
+            'role_id' => $user->role_id,
+            'foto' => $fotoUrl
+        ]
+    ], 200);
+}
 
     // ============================================================
     // LOGOUT
@@ -154,6 +164,8 @@ class AuthController extends Controller
             'data' => [
                 'id' => $user->id,
                 'nama' => $user->nama,
+                'nim' => $user->nim,
+                'prodi' => $user->prodi,
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,

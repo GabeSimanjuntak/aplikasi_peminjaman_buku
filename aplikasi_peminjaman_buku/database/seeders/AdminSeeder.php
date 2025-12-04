@@ -10,14 +10,15 @@ class AdminSeeder extends Seeder
 {
     public function run()
     {
-        // Cek apakah user admin sudah ada
         User::firstOrCreate(
-            ['username' => 'admin'],   // kolom unik yang dicek dulu
+            ['nama' => 'admin'],  // cek berdasarkan nama
+
             [
-                'nama' => 'Admin',
-                'email' => 'admin@example.com',
+                'email' => 'admin@gmail.com',
                 'password' => Hash::make('admin123'),
                 'role_id' => 1,
+                'nim' => null,
+                'prodi' => null,
             ]
         );
     }

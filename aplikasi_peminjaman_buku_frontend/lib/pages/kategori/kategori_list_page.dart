@@ -73,6 +73,7 @@ class _KategoriListPageState extends State<KategoriListPage> {
               final kategori = data[i];
               return ListTile(
                 title: Text(kategori["nama_kategori"]),
+                subtitle: Text("Stok: ${kategori['stok']}"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
