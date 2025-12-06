@@ -172,4 +172,25 @@ ADD CONSTRAINT users_nim_unique UNIQUE(nim);
 ALTER TABLE users 
 ADD COLUMN prodi VARCHAR(100) NULL;
 
+ALTER TABLE peminjaman 
+ALTER COLUMN status_pinjam SET DEFAULT 'pending';
 
+ALTER TABLE peminjaman DROP CONSTRAINT IF EXISTS chk_status_pinjam_valid;
+
+ALTER TABLE peminjaman
+ADD CONSTRAINT chk_status_pinjam_valid 
+CHECK (status_pinjam IN ('pending', 'aktif', 'selesai', 'terlambat', 'ditolak'));
+
+UPDATE peminjaman 
+SET status_pinjam = 'pending'
+WHERE status_pinjam NOT IN ('aktif', 'selesai', 'terlambat', 'ditolak');
+
+ALTER TABLE buku 
+ALTER COLUMN stok_total SET NOT NULL,
+ALTER COLUMN stok_tersedia SET NOT NULL;
+
+DROP TRIGGER IF EXISTS trg_set_status_buku_dipinjam ON peminjaman;
+DROP FUNCTION IF EXISTS set_status_buku_dipinjam();
+
+DROP TRIGGER IF EXISTS trg_set_status_buku_dikembalikan ON pengembalian;
+DROP FUNCTION IF EXISTS set_status_buku_dikembalikan();

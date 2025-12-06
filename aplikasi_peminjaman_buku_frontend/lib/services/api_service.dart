@@ -346,25 +346,21 @@ class ApiService {
 
   // ======================= USER SIDE =======================
 
-  static Future<List<dynamic>> getBooksUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
+static Future<List<dynamic>> getBooksUser() async {
+  final response = await http.get(
+    Uri.parse("$baseUrl/buku"),
+    headers: {
+      "Accept": "application/json",
+    },
+  );
 
-    final response = await http.get(
-      Uri.parse("$baseUrl/buku-user"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Accept": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      return json["data"] ?? [];
-    } else {
-      return [];
-    }
+  if (response.statusCode == 200) {
+    final json = jsonDecode(response.body);
+    return json["data"] ?? [];
+  } else {
+    return [];
   }
+}
 
   static Future<List<dynamic>> getLoanHistoryUser(int userId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -408,31 +404,22 @@ class ApiService {
 
   // ============================= APPROVE =============================
 
-  static Future<bool> approvePeminjaman(int id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token") ?? "";
+Future<Map<String, dynamic>> approvePeminjaman(int id) async {
+  final url = Uri.parse("${ApiService.baseUrl}/peminjaman/$id/konfirmasi");
 
-      final url = Uri.parse("$baseUrl/peminjaman/$id/approve");
-      final response = await http.put(
-        url,
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
+  final response = await http.post(
+    url,
+    headers: {
+      "Accept": "application/json",
+      "Authorization": "Bearer ${ApiService.authToken}",
+    },
+  );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final resBody = jsonDecode(response.body);
-        return resBody['success'] == true;
-      } else {
-        return false;
-      }
-    } catch (e) {
-      print("Exception approvePeminjaman: $e");
-      return false;
-    }
-  }
+  print("STATUS CODE: ${response.statusCode}");
+  print("BODY: ${response.body}");
+
+  return jsonDecode(response.body);
+}
 
   // ============================= UPLOAD FOTO PROFIL =============================
 
@@ -496,4 +483,45 @@ class ApiService {
 
     return body;
   }
+
+  // ======================= GET BOOK DETAIL =======================
+static Future<Map<String, dynamic>> getBookDetail(int id) async {
+  final response = await http.get(
+    Uri.parse("$baseUrl/buku/$id"),
+    headers: {"Accept": "application/json"},
+  );
+
+  print("DETAIL BOOK STATUS: ${response.statusCode}");
+  print("DETAIL BOOK BODY: ${response.body}");
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body)["data"];
+  }
+
+  throw Exception("Gagal memuat detail buku");
+}
+
+  /// Buat peminjaman baru untuk user
+static Future<Map<String, dynamic>> pinjamBuku(int id) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString("token"); // ← ini pasti ada
+  final userId = prefs.getInt("user_id");
+
+  print("TOKEN TERKIRIM SAAT PINJAM: $token");
+
+  final response = await http.post(
+    Uri.parse("$baseUrl/peminjaman"),
+    headers: {
+      "Authorization": "Bearer $token",
+      "Accept": "application/json",
+    },
+    body: {
+      "id_user": userId.toString(),
+      "id_buku": id.toString(),
+    },
+  );
+
+  return jsonDecode(response.body);
+}
+
 }

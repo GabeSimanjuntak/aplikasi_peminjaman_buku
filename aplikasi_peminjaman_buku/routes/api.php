@@ -9,10 +9,14 @@ use App\Http\Controllers\RiwayatController;
 use App\Http\Controllers\AuthController;
 
 
-// =============================
-// PUBLIC
-// =============================
+// =====================================================
+// PUBLIC ROUTES (TIDAK PERLU LOGIN)
+// User dan Guest bebas baca buku dan detail buku
+// =====================================================
+
 Route::get('/test', fn() => response()->json(['message' => 'API Ready']));
+
+// Auth
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -21,47 +25,41 @@ Route::post('/forgot-password', [AuthController::class, 'sendOtp']);
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Buku (Public)
+Route::get('/buku', [BukuController::class, 'index']);
+Route::get('/buku/{id}', [BukuController::class, 'show']);
+Route::get('/buku-serupa/{id}', [BukuController::class, 'bukuSerupa']);
 
 
-// =============================
-// USER ONLY (auth + isUser)
-// =============================
+// =====================================================
+// USER ROUTES (LOGIN + ROLE USER)
+// =====================================================
+
 Route::middleware(['auth:sanctum', 'isUser'])->group(function () {
 
     // Profile user
     Route::get('/profile/{id}', [AuthController::class, 'profile']);
-
-    // User lihat daftar buku (HANYA GET)
-    Route::get('/buku-user', [BukuController::class, 'index']);
-    Route::get('/buku-user/{id}', [BukuController::class, 'show']);
+    Route::post('/profile/update', [AuthController::class, 'updateProfile']);
 
     // Peminjaman buku
     Route::post('/peminjaman', [PeminjamanController::class, 'store']);
 
     // Riwayat peminjaman user
     Route::get('/riwayat/user/{id_user}', [RiwayatController::class, 'showByUser']);
-
-        // Profile user
-    Route::get('/profile/{id}', [AuthController::class, 'profile']);
-
-    // Update profile
-    Route::post('/profile/update', [AuthController::class, 'updateProfile']);
 });
 
 
+// =====================================================
+// ADMIN ROUTES (LOGIN + ROLE ADMIN)
+// CRUD Buku hanya Admin yang boleh
+// =====================================================
 
-// =============================
-// ADMIN ONLY (auth + isAdmin)
-// =============================
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 
     // CRUD Buku
-    Route::get('/buku', [BukuController::class, 'index']);
-    Route::get('/buku/{id}', [BukuController::class, 'show']);
     Route::post('/buku', [BukuController::class, 'store']);
     Route::put('/buku/{id}', [BukuController::class, 'update']);
     Route::delete('/buku/{id}', [BukuController::class, 'destroy']);
-    Route::get('/buku-serupa/{id}', [BukuController::class, 'bukuSerupa']);
 
     // CRUD Kategori
     Route::get('/kategori', [KategoriBukuController::class, 'index']);
@@ -74,10 +72,9 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::post('/pengembalian', [PengembalianController::class, 'store']);
     Route::get('/pengembalian', [PengembalianController::class, 'index']);
 
-    //Peminjaman buku
+    // Peminjaman approval
     Route::get('/peminjaman', [PeminjamanController::class, 'index']);
-    Route::put('/peminjaman/{id}/approve', [PeminjamanController::class, 'approve']);
-    Route::post('/pengembalian', [PengembalianController::class, 'store']);
+    Route::post('/peminjaman/{id}/konfirmasi', [PeminjamanController::class, 'konfirmasi']);
     Route::put('/peminjaman/{id}/pengembalian', [PeminjamanController::class, 'pengembalian']);
 
     // Semua riwayat
@@ -85,8 +82,8 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 });
 
 
-
-// =============================
+// =====================================================
 // LOGOUT (User atau Admin)
-// =============================
+// =====================================================
+
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);

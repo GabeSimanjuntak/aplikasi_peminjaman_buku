@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
+import '../user/book_detail_page.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -10,8 +11,8 @@ class UserHomePage extends StatefulWidget {
 }
 
 class _UserHomePageState extends State<UserHomePage> {
-  String userName = "User"; // Default name
-  String? userPhoto;        // Variable untuk foto
+  String userName = "User";
+  String? userPhoto;
   List<dynamic> books = [];
   bool isLoading = true;
 
@@ -25,10 +26,7 @@ class _UserHomePageState extends State<UserHomePage> {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      // Ambil nama yang tadi disimpan di Login Page
       userName = prefs.getString("nama") ?? "User";
-      
-      // Ambil foto profil (bisa null)
       userPhoto = prefs.getString("foto");
     });
 
@@ -60,7 +58,6 @@ class _UserHomePageState extends State<UserHomePage> {
               ),
               child: Row(
                 children: [
-                  // UPDATE: Tampilkan Foto Profil User
                   Container(
                     width: 50,
                     height: 50,
@@ -69,13 +66,11 @@ class _UserHomePageState extends State<UserHomePage> {
                       border: Border.all(color: Colors.white, width: 2),
                       image: DecorationImage(
                         fit: BoxFit.cover,
-                        // Logika: Jika ada foto URL (dan valid http), pakai itu. Jika tidak, pakai icon default.
                         image: (userPhoto != null && userPhoto!.startsWith('http'))
                             ? NetworkImage(userPhoto!) as ImageProvider
-                            : const AssetImage("assets/default_avatar.png"), // Pastikan asset ini ada, atau ganti logic di bawah
+                            : const AssetImage("assets/default_avatar.png"),
                       ),
                     ),
-                    // Fallback jika tidak punya asset gambar default, pakai child Icon:
                     child: (userPhoto == null || !userPhoto!.startsWith('http')) 
                         ? const Icon(Icons.person, color: Colors.white) 
                         : null,
@@ -86,7 +81,7 @@ class _UserHomePageState extends State<UserHomePage> {
                     children: [
                       const Text("Selamat Datang,", style: TextStyle(color: Colors.white70)),
                       Text(
-                        userName, // <--- NAMA USER MUNCUL DISINI
+                        userName,
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -100,7 +95,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
             const SizedBox(height: 20),
 
-            // === BANNER INFO (Sama seperti sebelumnya) ===
+            // === BANNER INFO ===
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
@@ -124,7 +119,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
             const SizedBox(height: 25),
 
-            // === REKOMENDASI BUKU (Sama seperti sebelumnya) ===
+            // === REKOMENDASI BUKU ===
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: const Text(
@@ -146,49 +141,61 @@ class _UserHomePageState extends State<UserHomePage> {
                       itemCount: books.length,
                       itemBuilder: (context, index) {
                         final book = books[index];
-                        return Container(
-                          width: 120,
-                          margin: const EdgeInsets.symmetric(horizontal: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5)
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[50],
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                                  ),
-                                  child: const Center(child: Icon(Icons.book, size: 40, color: Colors.blue)),
-                                ),
+                        return GestureDetector(
+                          onTap: () {
+                            final bookId = book['id'];
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BookDetailPage(bookId: bookId),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      book['judul'],
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            );
+                          },
+                          child: Container(
+                            width: 120,
+                            margin: const EdgeInsets.symmetric(horizontal: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5)
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      book['penulis'],
-                                      maxLines: 1,
-                                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                    ),
-                                  ],
+                                    child: const Center(child: Icon(Icons.book, size: 40, color: Colors.blue)),
+                                  ),
                                 ),
-                              )
-                            ],
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        book['judul'],
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        book['penulis'],
+                                        maxLines: 1,
+                                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
                           ),
                         );
                       },
