@@ -194,3 +194,6 @@ DROP FUNCTION IF EXISTS set_status_buku_dipinjam();
 
 DROP TRIGGER IF EXISTS trg_set_status_buku_dikembalikan ON pengembalian;
 DROP FUNCTION IF EXISTS set_status_buku_dikembalikan();
+
+ALTER TABLE users
+ADD COLUMN angkatan VARCHAR(10);

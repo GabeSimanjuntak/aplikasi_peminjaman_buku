@@ -32,6 +32,7 @@ class ApiService {
     required String email,
     required String nim,
     required String prodi,
+    required String angkatan,
     required String password,
     required int roleId,
   }) async {
@@ -43,6 +44,7 @@ class ApiService {
           'email': email,
           'nim': nim,
           'prodi': prodi,
+          'angkatan': angkatan,
           'password': password,
           'role_id': roleId.toString(),
         },

@@ -25,6 +25,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   late Animation<double> _scaleAnimation;
   late Animation<Color?> _colorAnimation;
   late Animation<double> _pulseAnimation;
+  late Animation<double> _textOpacityAnimation;
 
   final loginController = TextEditingController();
   final passwordController = TextEditingController();
@@ -74,6 +75,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.6, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+    
+    _textOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.7, 1.0, curve: Curves.easeIn),
       ),
     );
     
@@ -324,7 +332,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     required double top,
     required Color color,
     required double size,
-    required double delay,
   }) {
     return Positioned(
       left: left,
@@ -400,28 +407,24 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 top: 100,
                 color: Colors.blue.shade400,
                 size: 35,
-                delay: 0.1,
               ),
               _buildFloatingBook(
                 left: MediaQuery.of(context).size.width - 70,
                 top: 150,
                 color: Colors.green.shade400,
                 size: 30,
-                delay: 0.2,
               ),
               _buildFloatingBook(
                 left: 50,
                 top: MediaQuery.of(context).size.height - 200,
                 color: Colors.orange.shade400,
                 size: 40,
-                delay: 0.3,
               ),
               _buildFloatingBook(
                 left: MediaQuery.of(context).size.width - 80,
                 top: MediaQuery.of(context).size.height - 250,
                 color: Colors.purple.shade400,
                 size: 28,
-                delay: 0.4,
               ),
               
               // Main content
@@ -446,99 +449,103 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Logo section
-                        Stack(
-                          alignment: Alignment.center,
+                        // Logo section dengan GAIRMOS LIBRARY
+                        Column(
                           children: [
-                            // Outer glow
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 1000),
-                              width: 160,
-                              height: 160,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [
-                                    const Color(0xFF3498DB).withOpacity(0.3),
-                                    Colors.transparent,
-                                  ],
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Outer glow
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 1000),
+                                  width: 160,
+                                  height: 160,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        const Color(0xFF3498DB).withOpacity(0.3),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                
+                                // Animated book icon
+                                _buildAnimatedBookIcon(),
+                                
+                                // Success indicator (appears on successful animation)
+                                Positioned(
+                                  right: 10,
+                                  bottom: 10,
+                                  child: ScaleTransition(
+                                    scale: Tween<double>(begin: 0.0, end: 1.0).animate(
+                                      CurvedAnimation(
+                                        parent: _controller,
+                                        curve: const Interval(0.8, 1.0),
+                                      ),
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(0.5),
+                                            blurRadius: 15,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             
-                            // Animated book icon
-                            _buildAnimatedBookIcon(),
+                            const SizedBox(height: 20),
                             
-                            // Success indicator (appears on successful animation)
-                            Positioned(
-                              right: 10,
-                              bottom: 10,
-                              child: ScaleTransition(
-                                scale: Tween<double>(begin: 0.0, end: 1.0).animate(
-                                  CurvedAnimation(
-                                    parent: _controller,
-                                    curve: const Interval(0.8, 1.0),
+                            // GAIRMOS LIBRARY Text dengan animasi
+                            AnimatedOpacity(
+                              opacity: _textOpacityAnimation.value,
+                              duration: const Duration(milliseconds: 800),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    "GAIRMOS LIBRARY",
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF2C3E50),
+                                      letterSpacing: 1.2,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(2, 2),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.green.withOpacity(0.5),
-                                        blurRadius: 15,
-                                      ),
-                                    ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Sistem Peminjaman Buku Digital",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[700],
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                        
-                        const SizedBox(height: 30),
-                        
-                        // App title
-                        AnimatedOpacity(
-                          opacity: _fadeAnimation.value,
-                          duration: const Duration(milliseconds: 800),
-                          child: Column(
-                            children: [
-                              Text(
-                                "LIBRARY HUB",
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF2C3E50),
-                                  letterSpacing: 1.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 6,
-                                      offset: const Offset(2, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Sistem Peminjaman Buku Digital",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey[700],
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                         
                         const SizedBox(height: 40),
@@ -661,7 +668,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                           width: 2,
                                         ),
                                       ),
-                                      labelText: 'NIM / Username',
+                                      labelText: 'NIM / Nama',
                                       labelStyle: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -988,20 +995,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                         
                         const SizedBox(height: 30),
-                        
-                        // Footer
-                        AnimatedOpacity(
-                          opacity: _fadeAnimation.value,
-                          duration: const Duration(milliseconds: 1000),
-                          child: Text(
-                            "© 2024 Digital Library System",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
