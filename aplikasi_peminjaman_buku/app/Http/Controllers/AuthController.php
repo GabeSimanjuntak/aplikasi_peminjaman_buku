@@ -32,6 +32,7 @@ public function register(Request $request)
         'email' => $request->email,
         'nim' => $request->nim,
         'prodi' => $request->prodi,
+        'angkatan' => $request->angkatan,
         'password' => Hash::make($request->password),
         'role_id' => $roleId,
         'foto' => 'default-profile.png'
