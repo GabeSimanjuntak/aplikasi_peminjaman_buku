@@ -35,7 +35,7 @@ class _BookEditPageState extends State<BookEditPage> {
     stok = TextEditingController(text: widget.book["stok"].toString());
     deskripsi = TextEditingController(text: widget.book["deskripsi"]);
 
-    selectedKategori = widget.book["id_kategori"].toString();
+    selectedKategori = widget.book["id_kategori"]?.toString();
     loadKategori();
   }
 
@@ -44,6 +44,12 @@ class _BookEditPageState extends State<BookEditPage> {
     final token = prefs.getString("token");
 
     kategoriList = await ApiService.getKategori(token!);
+
+    // jika selectedKategori null atau tidak ada di list, pakai default pertama
+    if (kategoriList.isNotEmpty &&
+        !kategoriList.any((k) => k["id"].toString() == selectedKategori)) {
+      selectedKategori = kategoriList.first["id"].toString();
+    }
 
     setState(() {});
   }
@@ -65,7 +71,7 @@ class _BookEditPageState extends State<BookEditPage> {
         "tahun": tahun.text,
         "stok": stok.text,
         "deskripsi": deskripsi.text,
-        "id_kategori": selectedKategori,
+        "id_kategori": selectedKategori ?? kategoriList.first["id"].toString(),
       },
     );
 
@@ -93,18 +99,25 @@ class _BookEditPageState extends State<BookEditPage> {
               field(penerbit, "Penerbit", Icons.store),
               field(tahun, "Tahun", Icons.calendar_month),
               field(stok, "Stok", Icons.numbers),
-              DropdownButtonFormField(
-                value: selectedKategori,
-                decoration: const InputDecoration(
-                    labelText: "Kategori", border: OutlineInputBorder()),
-                items: kategoriList.map((kategori) {
-                  return DropdownMenuItem(
-                    value: kategori["id"].toString(),
-                    child: Text(kategori["nama_kategori"]),
-                  );
-                }).toList(),
-                onChanged: (v) => setState(() => selectedKategori = v),
-              ),
+              kategoriList.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: kategoriList.any(
+                              (k) => k["id"].toString() == selectedKategori)
+                          ? selectedKategori
+                          : kategoriList.first["id"].toString(),
+                      decoration: const InputDecoration(
+                        labelText: "Kategori",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: kategoriList.map((kategori) {
+                        return DropdownMenuItem(
+                          value: kategori["id"].toString(),
+                          child: Text(kategori["nama_kategori"]),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => selectedKategori = v),
+                    ),
               const SizedBox(height: 20),
               field(deskripsi, "Deskripsi", Icons.description, maxLines: 4),
               const SizedBox(height: 30),

@@ -14,14 +14,28 @@ class BookListPage extends StatefulWidget {
 class _BookListPageState extends State<BookListPage> {
   bool loading = true;
   List books = [];
+  String? userRole;
 
   @override
   void initState() {
     super.initState();
+    loadUserRole();
     loadBooks();
   }
 
+  Future<void> loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userRole = prefs.getString("role"); // misal: "admin" atau "user"
+    });
+  }
+
+
   Future<void> loadBooks() async {
+    setState(() {
+      loading = true;
+    });
+
     final data = await ApiService.getBooks();
 
     setState(() {
@@ -43,6 +57,44 @@ class _BookListPageState extends State<BookListPage> {
     loadBooks();
   }
 
+  Widget buildBookCard(Map book) {
+    final bool isAvailable = book["stok_tersedia"] > 0;
+    final bool canBorrow = userRole == "user" && isAvailable; 
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        title: Text(book["judul"], style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          "Penulis: ${book["penulis"]}\nStok tersedia: ${book["stok_tersedia"]}/${book["stok"]}",
+        ),
+        trailing: Wrap(
+          spacing: 8,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => BookEditPage(book: book)),
+                );
+                loadBooks();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => deleteBook(book["id"]),
+            ),
+           
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,44 +112,17 @@ class _BookListPageState extends State<BookListPage> {
         },
         child: const Icon(Icons.add),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: books.length,
-              itemBuilder: (context, i) {
-                final b = books[i];
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    title: Text(b["judul"]),
-                    subtitle: Text(
-                      "Penulis: ${b["penulis"]}\nStok: ${b["stok"]}",
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BookEditPage(book: b),
-                              ),
-                            );
-                            loadBooks();
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => deleteBook(b["id"]),
-                        ),
-                      ],
-                    ),
+      body: RefreshIndicator(
+        onRefresh: loadBooks,
+        child: loading
+            ? const Center(child: CircularProgressIndicator())
+            : books.isEmpty
+                ? const Center(child: Text("Belum ada buku tersedia"))
+                : ListView.builder(
+                    itemCount: books.length,
+                    itemBuilder: (context, i) => buildBookCard(books[i]),
                   ),
-                );
-              },
-            ),
+      ),
     );
   }
 }

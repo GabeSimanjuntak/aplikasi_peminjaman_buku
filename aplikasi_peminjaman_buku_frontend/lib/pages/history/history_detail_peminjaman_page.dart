@@ -11,7 +11,7 @@ class HistoryDetailPeminjamanPage extends StatelessWidget {
     try {
       DateTime dt = DateTime.parse(tanggal);
       return DateFormat('dd MMM yyyy').format(dt);
-    } catch (e) {
+    } catch (_) {
       return tanggal;
     }
   }
@@ -27,105 +27,138 @@ class HistoryDetailPeminjamanPage extends StatelessWidget {
     }
   }
 
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case "Tepat Waktu":
+        return Icons.check_circle;
+      case "Terlambat":
+        return Icons.warning;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Hitung status pengembalian
+    /// ================= HITUNG STATUS =================
     String statusPengembalian = "-";
     String keterangan = "-";
 
     if (item["tanggal_kembali"] != null &&
         item["tanggal_jatuh_tempo"] != null) {
-      DateTime tanggalKembali = DateTime.parse(item["tanggal_kembali"]);
-      DateTime tanggalJatuhTempo = DateTime.parse(item["tanggal_jatuh_tempo"]);
+      DateTime kembali = DateTime.parse(item["tanggal_kembali"]);
+      DateTime tempo = DateTime.parse(item["tanggal_jatuh_tempo"]);
 
-      if (tanggalKembali.isAfter(tanggalJatuhTempo)) {
+      if (kembali.isAfter(tempo)) {
         statusPengembalian = "Terlambat";
-        int selisihHari = tanggalKembali.difference(tanggalJatuhTempo).inDays;
+        int selisihHari = kembali.difference(tempo).inDays;
         keterangan = "Terlambat $selisihHari hari";
       } else {
         statusPengembalian = "Tepat Waktu";
-        keterangan = "-";
+        keterangan = "Dikembalikan sesuai batas waktu";
       }
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Detail Peminjaman"),
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Card(
-          elevation: 3,
+          elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Judul Buku
+                /// ===== JUDUL BUKU =====
                 Text(
                   item["judul_buku"] ?? "-",
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
+                const SizedBox(height: 12),
+                const Divider(),
+
+                /// ===== INFO PEMINJAMAN =====
+                _infoRow(Icons.person, "Peminjam", item["nama_user"]),
+                _infoRow(Icons.login, "Tanggal Pinjam",
+                    _formatTanggal(item["tanggal_pinjam"])),
+                _infoRow(Icons.event, "Jatuh Tempo",
+                    _formatTanggal(item["tanggal_jatuh_tempo"])),
+                _infoRow(Icons.logout, "Tanggal Kembali",
+                    _formatTanggal(item["tanggal_kembali"])),
+
                 const SizedBox(height: 16),
 
-                // Detail Peminjaman
-                _buildRow("Peminjam", item["nama_user"]),
-                const SizedBox(height: 6),
-                _buildRow(
-                    "Tanggal Pinjam", _formatTanggal(item["tanggal_pinjam"])),
-                const SizedBox(height: 6),
-                _buildRow(
-                    "Jatuh Tempo", _formatTanggal(item["tanggal_jatuh_tempo"])),
-                const SizedBox(height: 6),
-                _buildRow(
-                    "Tanggal Kembali", _formatTanggal(item["tanggal_kembali"])),
-                const SizedBox(height: 12),
-
-                // Status Pengembalian dengan warna
+                /// ===== STATUS =====
                 Row(
                   children: [
-                    Text(
-                      "Status Pengembalian: ",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    const Text(
+                      "Status Pengembalian",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
+                    const SizedBox(width: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: _statusColor(statusPengembalian)
-                            .withOpacity(0.2),
-                        border: Border.all(
-                            color: _statusColor(statusPengembalian)),
-                        borderRadius: BorderRadius.circular(8),
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      child: Text(
-                        statusPengembalian,
-                        style: TextStyle(
-                          color: _statusColor(statusPengembalian),
-                          fontWeight: FontWeight.bold,
-                        ),
+                      decoration: BoxDecoration(
+                        color:
+                            _statusColor(statusPengembalian).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _statusIcon(statusPengembalian),
+                            size: 16,
+                            color: _statusColor(statusPengembalian),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            statusPengembalian,
+                            style: TextStyle(
+                              color: _statusColor(statusPengembalian),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
 
-                // Keterangan
+                const SizedBox(height: 10),
+
+                /// ===== KETERANGAN =====
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Keterangan: ",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      "Keterangan : ",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    Flexible(
-                      child: Text(keterangan),
+                    Expanded(
+                      child: Text(
+                        keterangan,
+                        style: const TextStyle(color: Colors.black87),
+                      ),
                     ),
                   ],
                 ),
@@ -137,16 +170,28 @@ class HistoryDetailPeminjamanPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "$label: ",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        Flexible(child: Text(value)),
-      ],
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            "$label : ",
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.grey,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

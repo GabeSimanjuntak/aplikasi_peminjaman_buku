@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'book_detail_page.dart';
 import '../../services/api_service.dart';
 
 class UserSearchPage extends StatefulWidget {
@@ -10,7 +10,7 @@ class UserSearchPage extends StatefulWidget {
 }
 
 class _UserSearchPageState extends State<UserSearchPage> {
-  TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   List<dynamic> allBooks = [];
   List<dynamic> filteredBooks = [];
   bool isLoading = true;
@@ -31,207 +31,177 @@ class _UserSearchPageState extends State<UserSearchPage> {
   }
 
   void _runFilter(String keyword) {
-    List<dynamic> results = [];
-    if (keyword.isEmpty) {
-      results = allBooks;
-    } else {
-      results = allBooks
-          .where((book) =>
-              book["judul"].toLowerCase().contains(keyword.toLowerCase()))
-          .toList();
-    }
     setState(() {
-      filteredBooks = results;
+      filteredBooks = allBooks
+          .where((b) =>
+              b['judul'].toLowerCase().contains(keyword.toLowerCase()))
+          .toList();
     });
-  }
-
-  // === LOGIC BARU: TAMPILKAN DIALOG TANGGAL ===
-  void _showPinjamDialog(Map<String, dynamic> book) {
-    showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 3)), // Default 3 hari ke depan
-      firstDate: DateTime.now(), // Tidak boleh tanggal lampau
-      lastDate: DateTime.now().add(const Duration(days: 14)), // Maksimal 2 minggu
-      helpText: "Pilih Tanggal Pengembalian",
-    ).then((selectedDate) {
-      if (selectedDate != null) {
-        // Konversi ke format YYYY-MM-DD
-        String formattedDate = selectedDate.toIso8601String().split('T')[0];
-        _prosesPinjamBuku(book['id'], formattedDate);
-      }
-    });
-  }
-
-  // === LOGIC BARU: KIRIM KE API ===
-  Future<void> _prosesPinjamBuku(int bukuId, String tanggalJatuhTempo) async {
-    final prefs = await SharedPreferences.getInstance();
-    int? userId = prefs.getInt("user_id");
-
-    if (userId == null) return;
-
-    // Tampilkan loading dialog kecil
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    Map data = {
-      "id_user": userId.toString(),
-      "id_buku": bukuId.toString(),
-      "tanggal_jatuh_tempo": tanggalJatuhTempo,
-    };
-
-    try {
-      final response = await ApiService.createPeminjaman(data);
-      
-      // Tutup loading dialog
-      Navigator.pop(context); 
-
-      if (response['success'] == true) {
-        _showSuccessDialog("Berhasil!", "Buku berhasil dipinjam. Jangan lupa kembalikan pada $tanggalJatuhTempo.");
-        
-        // Refresh daftar buku (karena status buku mungkin berubah jadi 'dipinjam')
-        _fetchBooks(); 
-      } else {
-        _showErrorSnackBar(response['message'] ?? "Gagal meminjam");
-      }
-    } catch (e) {
-      Navigator.pop(context); // Tutup loading jika error
-      _showErrorSnackBar("Terjadi kesalahan sistem: $e");
-    }
-  }
-
-  void _showSuccessDialog(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title, style: const TextStyle(color: Colors.green)),
-        content: Text(content),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          TextField(
-            controller: searchController,
-            onChanged: _runFilter,
-            decoration: InputDecoration(
-              hintText: "Cari judul, penulis...",
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Colors.white,
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: Column(
+          children: [
+            /// ===== SEARCH BAR =====
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Material(
+                elevation: 2,
+                borderRadius: BorderRadius.circular(16),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: _runFilter,
+                  decoration: InputDecoration(
+                    hintText: "Cari judul buku...",
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              searchController.clear();
+                              _runFilter('');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredBooks.isEmpty
-                    ? const Center(child: Text("Buku tidak ditemukan"))
-                    : ListView.builder(
-                        itemCount: filteredBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = filteredBooks[index];
-                          final String kategori = book['kategori'] != null 
-                              ? book['kategori']['nama_kategori'] 
-                              : '-';
-                          
-                          // Cek status buku
-                          bool isAvailable = book['status'] == 'tersedia';
 
-                          return Card(
-                            elevation: 3,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Icon Buku (Bisa diganti Image.network nanti jika ada gambar)
-                                  Container(
-                                    width: 60,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue[100],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(Icons.book, size: 40, color: Colors.blue),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // Info Buku
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          book["judul"],
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text("Penulis: ${book["penulis"]}", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                                        Text("Kategori: $kategori", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                                        const SizedBox(height: 8),
-                                        // Badge Status
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isAvailable ? Colors.green[50] : Colors.red[50],
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: isAvailable ? Colors.green : Colors.red),
-                                          ),
-                                          child: Text(
-                                            isAvailable ? "Tersedia" : "Dipinjam",
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: isAvailable ? Colors.green : Colors.red,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Tombol Pinjam
-                                  if (isAvailable)
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blueAccent,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      onPressed: () => _showPinjamDialog(book),
-                                      child: const Text("Pinjam"),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+            /// ===== LIST =====
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredBooks.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "Buku tidak ditemukan",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredBooks.length,
+                          itemBuilder: (context, index) {
+                            final book = filteredBooks[index];
+                            final bool isAvailable =
+                                (book['stok_tersedia'] ?? 0) > 0;
+
+                            return _bookCard(book, isAvailable);
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ================= BOOK CARD =================
+  Widget _bookCard(Map<String, dynamic> book, bool isAvailable) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookDetailPage(bookId: book['id']),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              /// ===== ICON =====
+              Container(
+                width: 65,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.menu_book,
+                  size: 42,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              /// ===== INFO =====
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book['judul'],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
-          )
-        ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Penulis: ${book['penulis']}",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      "Kategori: ${book['kategori']?['nama_kategori'] ?? '-'}",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    /// ===== STATUS =====
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isAvailable
+                            ? Colors.green.withOpacity(0.15)
+                            : Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isAvailable ? "Tersedia" : "Stok Habis",
+                        style: TextStyle(
+                          color:
+                              isAvailable ? Colors.green : Colors.red,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

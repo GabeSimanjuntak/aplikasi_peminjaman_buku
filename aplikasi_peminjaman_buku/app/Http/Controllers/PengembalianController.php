@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Pengembalian;
 use App\Models\Peminjaman;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;     // ✔ WAJIB ADA JIKA MEMAKAI CARBON
+use App\Models\Buku;
 
 class PengembalianController extends Controller
 {
@@ -61,6 +64,92 @@ class PengembalianController extends Controller
         return response()->json([
             'success' => true,
             'data' => $data
+        ]);
+    }
+
+    //     public function approve($id)
+    // {
+    //     $p = Peminjaman::findOrFail($id);
+
+    //     if ($p->status_pinjam !== 'pengajuan_kembali') {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Bukan pengajuan pengembalian'
+    //         ], 400);
+    //     }
+
+    //     $tanggalKembali = Carbon::now();
+    //     $jatuhTempo = Carbon::parse($p->tanggal_jatuh_tempo);
+
+    //     // update peminjaman
+    //     $p->status_pinjam = 'dikembalikan';
+    //     $p->tanggal_kembali = $tanggalKembali;
+    //     $p->save();
+
+    //     // update stok buku
+    //     $buku = Buku::find($p->id_buku);
+    //     $buku->stok_tersedia += 1;
+    //     $buku->save();
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Pengembalian disetujui'
+    //     ]);
+    // }
+
+    // ✅ HISTORY ADMIN
+    public function history()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => Peminjaman::where('status_pinjam', 'dikembalikan')
+                ->orderByDesc('tanggal_kembali')
+                ->get()
+        ]);
+    }
+
+
+
+    public function approvePengembalian($id)
+    {
+        $p = Peminjaman::find($id);
+
+        if (!$p) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data peminjaman tidak ditemukan'
+            ], 404);
+        }
+
+        if ($p->status_pinjam !== 'pengajuan_kembali') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Belum diajukan pengembalian'
+            ], 400);
+        }
+
+        $p->status_pinjam = 'dikembalikan';
+        $p->tanggal_pengembalian_dipilih = now()->toDateString();
+        $p->save();
+
+        Pengembalian::create([
+            'id_peminjaman' => $p->id,
+            'tanggal_kembali' => now()->toDateString(), // kolom pengembalian
+            'status_pengembalian' => 'dikembalikan'
+        ]);
+
+
+        // update stok buku
+        $buku = Buku::find($p->id_buku);
+        if ($buku) {
+            $buku->stok_tersedia = min($buku->stok_tersedia + 1, $buku->stok);
+            $buku->save();
+        }
+
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengembalian disetujui'
         ]);
     }
 

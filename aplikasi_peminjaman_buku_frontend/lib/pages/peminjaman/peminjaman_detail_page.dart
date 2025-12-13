@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../history/history_peminjaman_page.dart';
+import '../../services/api_service.dart';
 
 class PeminjamanDetailPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -24,201 +24,285 @@ class _PeminjamanDetailPageState extends State<PeminjamanDetailPage> {
     item = Map<String, dynamic>.from(widget.item);
   }
 
-  Future<void> approvePeminjaman(int id) async {
-    setState(() => isLoading = true);
+  /// Cek apakah tanggal pengembalian sudah lewat
+  bool isPastReturn() {
+    final tanggalStr = item["tanggal_pengembalian_dipilih"];
+    if (tanggalStr == null) return false;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      final response = await http.put(
-        Uri.parse("$baseUrl/peminjaman/$id/approve"),
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          item["status_pinjam"] = "disetujui";
-          item["is_approved"] = true;
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Peminjaman disetujui!")));
-        Navigator.pop(context, item);
-      } else {
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Gagal approve")));
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-      print("Error approve: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Terjadi error: $e")));
+      final dueDate = DateTime.parse(tanggalStr).add(const Duration(hours: 23, minutes: 59));
+      return DateTime.now().isAfter(dueDate);
+    } catch (_) {
+      return false;
     }
   }
 
-  Future<void> pengembalianPeminjaman(int id) async {
+  /// Setujui peminjaman
+  Future<void> approvePeminjaman(int id) async {
     setState(() => isLoading = true);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
 
-      final response = await http.post(
-        Uri.parse("$baseUrl/pengembalian"),
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({"id_peminjaman": id}),
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final res = await http.post(
+      Uri.parse("$baseUrl/peminjaman/$id/konfirmasi"),
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        item["status_pinjam"] = "dipinjam";
+      });
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal konfirmasi: ${res.body}")),
       );
+    }
 
-      if (response.statusCode == 200) {
-        final tanggalJatuhTempo = DateTime.parse(item['tanggal_jatuh_tempo']);
-        final tanggalSekarang = DateTime.now();
-        final terlambat = tanggalSekarang.isAfter(tanggalJatuhTempo);
+    setState(() => isLoading = false);
+  }
 
-        setState(() {
-          item["status_pinjam"] = "selesai";
-          isLoading = false;
-        });
+  /// Setujui pengembalian
+  Future<void> approvePengembalian(int id) async {
+    setState(() => isLoading = true);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(terlambat
-                ? "Pengembalian berhasil! Status: TERLAMBAT"
-                : "Pengembalian berhasil! Status: TEPAT WAKTU"),
-          ),
-        );
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-        Navigator.pop(context, item);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HistoryPeminjamanPage(),
-          ),
-        );
-      } else {
-        final resBody = jsonDecode(response.body);
-        final message = resBody['message'] ?? 'Gagal melakukan pengembalian';
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-      print("Error pengembalian: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Terjadi error: $e")));
+    final res = await http.put(
+      Uri.parse("$baseUrl/peminjaman/$id/approve-pengembalian"),
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (res.statusCode == 200) {
+      // backend set → menunggu_pengembalian
+      setState(() {
+        item["status_pinjam"] = "menunggu_pengembalian";
+      });
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal approve pengembalian: ${res.body}")),
+      );
+    }
+
+    setState(() => isLoading = false);
+  }
+
+  /// ==================== LOGIC STATUS ====================
+  String displayStatus() {
+  final status = item["status_pinjam"];
+  final pengembalian = item["tanggal_pengembalian_dipilih"];
+  DateTime? returnDate;
+  if (pengembalian != null) {
+    returnDate = DateTime.parse(pengembalian);
+  }
+
+  // Jika sudah dikembalikan / disetujui pengembalian
+  if (status == "dikembalikan" || status == "pengembalian_disetujui") {
+    if (returnDate != null && !DateTime.now().isBefore(returnDate)) {
+      // hari ini atau sudah lewat → Sudah Dikembalikan
+      return "Sudah Dikembalikan";
+    } else {
+      // belum lewat → Menunggu Pengembalian
+      return "Menunggu Pengembalian";
+    }
+  }
+
+  switch (status) {
+    case "menunggu_persetujuan":
+      return "Menunggu Persetujuan";
+    case "dipinjam":
+      return "Sedang Dipinjam";
+    case "pengajuan_kembali":
+      return "Pengajuan Pengembalian";
+    case "menunggu_pengembalian":
+      return "Menunggu Pengembalian";
+    default:
+      return status ?? "-";
+  }
+}
+
+
+  Color displayColor() {
+    switch (displayStatus()) {
+      case "Menunggu Persetujuan":
+        return Colors.orange;
+      case "Sedang Dipinjam":
+        return Colors.blue;
+      case "Pengajuan Pengembalian":
+        return Colors.purple;
+      case "Menunggu Pengembalian":
+        return Colors.deepOrange;
+      case "Sudah Dikembalikan":
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final pengembalianDipilih = item["tanggal_pengembalian_dipilih"];
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Detail Peminjaman")),
+      appBar: AppBar(
+        title: const Text(
+          "Detail Peminjaman",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF0D47A1),
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16),
-              child: Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item["judul_buku"] ?? "-",
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 20),
-                      detailRow("ID Peminjaman", item["id_peminjaman"].toString()),
-                      detailRow("Nama Peminjam", item["nama_user"]),
-                      detailRow("Tanggal Pinjam", item["tanggal_pinjam"] ?? "-"),
-                      detailRow("Jatuh Tempo", item["tanggal_jatuh_tempo"]),
-                      detailRow(
-                        "Status",
-                        item["status_pinjam"],
-                        valueColor: item["status_pinjam"] == "aktif"
-                            ? Colors.orange
-                            : item["status_pinjam"] == "disetujui"
-                                ? Colors.blue
-                                : Colors.green,
-                      ),
-                      const Spacer(),
-                      Column(
+              child: Column(
+                children: [
+                  // =================== CARD INFO ===================
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (item["status_pinjam"] == "aktif")
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    approvePeminjaman(item["id_peminjaman"]),
-                                style: ElevatedButton.styleFrom(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 14)),
-                                child: const Text(
-                                  "Approve Peminjaman",
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ),
+                          Text(
+                            item["judul_buku"] ?? "-",
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0D47A1),
                             ),
+                          ),
                           const SizedBox(height: 12),
-                          if (item["status_pinjam"] == "disetujui")
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    pengembalianPeminjaman(item["id_peminjaman"]),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                          _infoRow("Peminjam", item["nama_user"]),
+                          _infoRow("Tanggal Pinjam", item["tanggal_pinjam"]),
+                          _infoRow("Jatuh Tempo", item["tanggal_jatuh_tempo"]),
+                          if (pengembalianDipilih != null)
+                            _infoRow(
+                              "Usulan Pengembalian",
+                              pengembalianDipilih.substring(0, 10),
+                            ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: displayColor().withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  "Kembalikan Buku",
+                                child: Text(
+                                  "Status: ${displayStatus()}",
                                   style: TextStyle(
-                                      fontSize: 16, color: Colors.white),
+                                    color: displayColor(),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                          if (item["status_pinjam"] == "selesai")
-                            const Text(
-                              "Buku sudah dikembalikan",
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  const Spacer(),
+
+                  // ==================== ACTION BUTTONS ====================
+                  if (displayStatus() == "Menunggu Persetujuan")
+                    _actionButton(
+                      text: "Konfirmasi Peminjaman",
+                      color: Colors.blue,
+                      onPressed: () => approvePeminjaman(item["id_peminjaman"]),
+                    ),
+
+                  if (displayStatus() == "Pengajuan Pengembalian")
+                    _actionButton(
+                      text: "Setujui Pengembalian",
+                      color: Colors.deepOrange,
+                      onPressed: () => approvePengembalian(item["id_peminjaman"]),
+                    ),
+
+                  if (displayStatus() == "Menunggu Pengembalian")
+                    const Text(
+                      "✔ Pengembalian sudah disetujui\nMenunggu tanggal pengembalian...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.deepOrange,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                  if (displayStatus() == "Sudah Dikembalikan")
+                    const Text(
+                      "✔ Buku sudah dikembalikan",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
               ),
             ),
     );
   }
 
-  Widget detailRow(String title, String? value, {Color? valueColor}) {
+  // ==================== WIDGET HELPER ====================
+  Widget _infoRow(String title, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-          Text(value ?? "-", style: TextStyle(fontSize: 16, color: valueColor ?? Colors.black87)),
+          Text(
+            "$title:",
+            style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value ?? "-",
+              style: const TextStyle(fontSize: 15),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required String text,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
       ),
     );
   }

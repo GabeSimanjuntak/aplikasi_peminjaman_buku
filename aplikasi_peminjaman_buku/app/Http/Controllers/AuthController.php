@@ -17,6 +17,7 @@ public function register(Request $request)
 {
     $request->validate([
         'nama' => 'required|string|max:100',
+        'username' => 'required|string|unique:users,username',
         'email' => 'required|email|unique:users,email',
         'nim' => 'required|string|max:20|unique:users,nim',
         'prodi' => 'required|string|max:100',
@@ -27,6 +28,7 @@ public function register(Request $request)
 
     $user = User::create([
         'nama' => $request->nama,
+        'username' => $request->username,
         'email' => $request->email,
         'nim' => $request->nim,
         'prodi' => $request->prodi,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
+import 'loan_detail_page.dart';
 
 class UserLoansPage extends StatefulWidget {
   const UserLoansPage({super.key});
@@ -10,8 +11,9 @@ class UserLoansPage extends StatefulWidget {
 }
 
 class _UserLoansPageState extends State<UserLoansPage> {
-  List<dynamic> loans = [];
+  List<Map<String, dynamic>> loans = [];
   bool isLoading = true;
+  bool isSubmitting = false;
 
   @override
   void initState() {
@@ -19,149 +21,254 @@ class _UserLoansPageState extends State<UserLoansPage> {
     _loadLoans();
   }
 
-  // Fungsi reload untuk "Pull to Refresh"
+  // ================= LOAD DATA =================
   Future<void> _loadLoans() async {
-    final prefs = await SharedPreferences.getInstance();
-    int? userId = prefs.getInt("user_id");
+    setState(() => isLoading = true);
 
-    if (userId != null) {
-      try {
-        final data = await ApiService.getLoanHistoryUser(userId);
-        setState(() {
-          // Kita balik urutannya biar yang terbaru ada di atas
-          loans = data.reversed.toList();
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() => isLoading = false);
-      }
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+
+    if (userId == null) {
+      setState(() => isLoading = false);
+      return;
+    }
+
+    try {
+      final data = await ApiService.getLoanHistoryUser(userId);
+
+      loans = data.map<Map<String, dynamic>>(
+        (e) => Map<String, dynamic>.from(e),
+      ).toList();
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memuat data: $e")),
+      );
     }
   }
 
+  // ================= AJUKAN PENGEMBALIAN =================
+  Future<void> _ajukanPengembalian(Map<String, dynamic> loan) async {
+    final String? tglPinjamStr = loan['tanggal_pinjam'];
+
+    if (tglPinjamStr == null || tglPinjamStr.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tanggal pinjam tidak ditemukan")),
+      );
+      return;
+    }
+
+    final tanggalPinjam = DateTime.parse(tglPinjamStr);
+
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: tanggalPinjam.add(const Duration(days: 1)),
+      firstDate: tanggalPinjam,
+      lastDate: tanggalPinjam.add(const Duration(days: 30)),
+    );
+
+    if (pickedDate == null) return;
+
+    if (pickedDate.isBefore(tanggalPinjam)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Tanggal pengembalian tidak boleh sebelum tanggal peminjaman")),
+      );
+      return;
+    }
+
+    setState(() => isSubmitting = true);
+
+    try {
+      final result = await ApiService.ajukanPengembalianWithDate(
+        loan['id_peminjaman'],
+        pickedDate,
+      );
+
+      if (result['success'] == true) {
+        final index = loans.indexWhere(
+            (l) => l['id_peminjaman'] == loan['id_peminjaman']);
+
+        if (index != -1) {
+          setState(() {
+            loans[index]['status_pinjam'] = 'pengajuan_kembali';
+            loans[index]['tanggal_pengembalian_dipilih'] =
+                "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+          });
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Pengajuan pengembalian berhasil. Menunggu persetujuan."),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Gagal')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Terjadi kesalahan: $e")),
+      );
+    } finally {
+      setState(() => isSubmitting = false);
+    }
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: RefreshIndicator(
-        onRefresh: _loadLoans,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : loans.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
+      appBar: AppBar(
+        title: const Text("Riwayat Peminjaman"),
+        centerTitle: true,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : loans.isEmpty
+              ? const Center(child: Text("Belum ada riwayat peminjaman"))
+              : RefreshIndicator(
+                  onRefresh: _loadLoans,
+                  child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: loans.length,
                     itemBuilder: (context, index) {
-                      final item = loans[index];
-                      // Menangani null safety jika buku sudah dihapus admin
-                      final judulBuku = item['buku'] != null ? item['buku']['judul'] : 'Buku dihapus';
-                      final String status = item['status_pinjam'] ?? 'unknown';
-
-                      return _buildLoanCard(item, judulBuku, status);
+                      return _loanCard(loans[index]);
                     },
                   ),
-      ),
+                ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.history_edu, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          const Text("Belum ada riwayat peminjaman.", style: TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
+  // ================= CARD =================
+  Widget _loanCard(Map<String, dynamic> item) {
+    final judul = item['judul_buku']?.toString() ?? '-';
+    final status = item['status_pengembalian'] ?? item['status_pinjam'];
 
-  Widget _buildLoanCard(Map item, String judul, String status) {
-    // Tentukan warna berdasarkan status
+    final tanggalPinjam = item['tanggal_pinjam']?.toString();
+    final jatuhTempo = item['tanggal_jatuh_tempo']?.toString();
+    final tanggalPengembalianDipilih = item['tanggal_pengembalian_dipilih']?.toString();
+
     Color statusColor;
     String statusLabel;
-    IconData statusIcon;
 
-    if (status == 'aktif') {
-      statusColor = Colors.orange;
-      statusLabel = "Sedang Dipinjam";
-      statusIcon = Icons.timer;
-    } else if (status == 'selesai') {
-      statusColor = Colors.green;
-      statusLabel = "Dikembalikan";
-      statusIcon = Icons.check_circle;
-    } else {
-      statusColor = Colors.red;
-      statusLabel = status.toUpperCase();
-      statusIcon = Icons.error;
+    switch (status) {
+      case 'menunggu_persetujuan':
+        statusColor = Colors.orange;
+        statusLabel = 'Menunggu Persetujuan';
+        break;
+      case 'pengajuan_kembali':
+        statusColor = Colors.green;
+        statusLabel = 'Pengembalian Diajukan';
+        break;
+      case 'dikembalikan':
+        statusColor = Colors.grey;
+        statusLabel = 'Dikembalikan';
+        break;
+      default:
+        statusColor = Colors.blue;
+        statusLabel = 'Dipinjam';
     }
 
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    judul,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(statusIcon, size: 14, color: statusColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+    if (item['catatan'] == 'terlambat') {
+      statusColor = Colors.red;
+      statusLabel += ' (Terlambat)';
+    }
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LoanDetailPage(item: item),
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      judul,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
+                    ),
                   ),
-                )
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              _infoRow("Tanggal Pinjam", tanggalPinjam),
+              _infoRow("Jatuh Tempo", jatuhTempo),
+
+              if (tanggalPengembalianDipilih != null &&
+                  tanggalPengembalianDipilih.isNotEmpty) ...[
+                const Divider(height: 24),
+                _infoRow("Tanggal Pengembalian", tanggalPengembalianDipilih),
               ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildInfoColumn("Tanggal Pinjam", item['tanggal_pinjam']),
-                _buildInfoColumn("Jatuh Tempo", item['tanggal_jatuh_tempo']),
-                // Jika sudah kembali, tampilkan tanggal kembali
-                if (item['tanggal_kembali'] != null)
-                   _buildInfoColumn("Dikembalikan", item['tanggal_kembali']),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoColumn(String label, String? value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-        const SizedBox(height: 4),
-        Text(value ?? "-", style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-      ],
+  Widget _infoRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value ?? '-',
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

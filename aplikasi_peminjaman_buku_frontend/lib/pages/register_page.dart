@@ -14,6 +14,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool loading = false;
 
   final namaCtrl = TextEditingController();
+  final usernameCtrl = TextEditingController(); // ✅
   final emailCtrl = TextEditingController();
   final nimCtrl = TextEditingController();
   final prodiCtrl = TextEditingController();
@@ -22,6 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     namaCtrl.dispose();
+    usernameCtrl.dispose();
     emailCtrl.dispose();
     nimCtrl.dispose();
     prodiCtrl.dispose();
@@ -37,6 +39,7 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       final res = await ApiService.register(
         nama: namaCtrl.text.trim(),
+        username: usernameCtrl.text.trim(), // ✅ FIX UTAMA
         email: emailCtrl.text.trim(),
         nim: nimCtrl.text.trim(),
         prodi: prodiCtrl.text.trim(),
@@ -92,7 +95,10 @@ class _RegisterPageState extends State<RegisterPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
-                    color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                )
               ],
             ),
             child: Form(
@@ -109,7 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Full Name
+                  // FULL NAME
                   TextFormField(
                     controller: namaCtrl,
                     decoration: const InputDecoration(
@@ -121,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Email
+                  // EMAIL
                   TextFormField(
                     controller: emailCtrl,
                     decoration: const InputDecoration(
@@ -143,6 +149,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       labelText: "NIM",
                       prefixIcon: Icon(Icons.numbers),
                     ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      usernameCtrl.text = value; // ✅ username = NIM
+                    },
                     validator: (v) =>
                         v!.isEmpty ? "NIM required" : null,
                   ),
@@ -171,10 +181,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     validator: (v) =>
                         v!.length < 6 ? "Minimum 6 characters" : null,
                   ),
-
                   const SizedBox(height: 20),
 
-                  // REGISTER BUTTON
+                  // BUTTON
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -192,14 +201,15 @@ class _RegisterPageState extends State<RegisterPage> {
                           : const Text(
                               "Register",
                               style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Navigate to Login
                   GestureDetector(
                     onTap: () => Navigator.pushReplacement(
                       context,

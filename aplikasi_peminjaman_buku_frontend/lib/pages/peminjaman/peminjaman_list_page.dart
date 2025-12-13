@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'peminjaman_detail_page.dart';
 import '../history/history_peminjaman_page.dart';
 
@@ -16,6 +15,7 @@ class PeminjamanListPage extends StatefulWidget {
 class _PeminjamanListPageState extends State<PeminjamanListPage> {
   List<dynamic> peminjamanList = [];
   bool isLoading = true;
+
   final String baseUrl = "http://10.0.2.2:8000/api";
 
   @override
@@ -24,8 +24,32 @@ class _PeminjamanListPageState extends State<PeminjamanListPage> {
     fetchPeminjaman();
   }
 
+  /// Fungsi safe untuk menampilkan tanggal
+  String safeDate(dynamic value) {
+    if (value == null) return "-";
+    try {
+      return value.toString().substring(0, 10);
+    } catch (_) {
+      return value.toString();
+    }
+  }
+
+  /// Cek apakah tanggal pengembalian sudah lewat
+  bool isPastReturn(Map<String, dynamic> item) {
+    final tanggalStr = item["tanggal_pengembalian_dipilih"];
+    if (tanggalStr == null) return false;
+    try {
+      final dueDate = DateTime.parse(tanggalStr).add(const Duration(hours: 23, minutes: 59));
+      return DateTime.now().isAfter(dueDate);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Ambil peminjaman aktif & pengembalian disetujui (yang belum lewat)
   Future<void> fetchPeminjaman() async {
     setState(() => isLoading = true);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
@@ -40,100 +64,53 @@ class _PeminjamanListPageState extends State<PeminjamanListPage> {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
+        final List<dynamic> allLoans = jsonData["data"] ?? [];
+
+        // Filter data sesuai aturan
+        final filteredLoans = allLoans.where((item) {
+          final status = item["status_pinjam"];
+          if (status == "menunggu_persetujuan" ||
+              status == "dipinjam" ||
+              status == "pengajuan_kembali") {
+            return true; // selalu tampil
+          }
+
+          if (status == "dikembalikan" || status == "pengembalian_disetujui") {
+            return !isPastReturn(item); // tampil jika belum lewat
+          }
+
+          return false; // selain itu, tidak tampil
+        }).toList();
+
         setState(() {
-          peminjamanList = (jsonData["data"] ?? [])
-              .where((e) =>
-                  e["status_pinjam"] == "aktif" ||
-                  e["status_pinjam"] == "disetujui")
-              .toList();
+          peminjamanList = filteredLoans;
           isLoading = false;
         });
       } else {
         setState(() => isLoading = false);
       }
     } catch (e) {
+      debugPrint("Error fetch peminjaman: $e");
       setState(() => isLoading = false);
-      print("Error fetch peminjaman: $e");
     }
   }
 
-  Future<void> approvePeminjaman(int id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      final response = await http.put(
-        Uri.parse("$baseUrl/peminjaman/$id/approve"),
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          final idx = peminjamanList.indexWhere((e) => e["id_peminjaman"] == id);
-          if (idx != -1) {
-            peminjamanList[idx]["status_pinjam"] = "disetujui";
-            peminjamanList[idx]["is_approved"] = true;
-          }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Peminjaman disetujui!")),
-        );
+  Map<String, dynamic> getStatusInfo(Map<String, dynamic> item) {
+    final status = item["status_pinjam"];
+    if (status == "menunggu_persetujuan") {
+      return {"label": "Menunggu Persetujuan", "color": Colors.orange, "icon": Icons.hourglass_top};
+    } else if (status == "dipinjam") {
+      return {"label": "Sedang Dipinjam", "color": Colors.blue, "icon": Icons.book};
+    } else if (status == "pengajuan_kembali") {
+      return {"label": "Pengembalian Diajukan", "color": Colors.green, "icon": Icons.assignment_turned_in};
+    } else if (status == "dikembalikan" || status == "pengembalian_disetujui") {
+      if (!isPastReturn(item)) {
+        return {"label": "Pengembalian Disetujui", "color": Colors.deepOrange, "icon": Icons.check_circle};
       } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Gagal approve")));
+        return {"label": "Sudah Dikembalikan", "color": Colors.grey, "icon": Icons.history};
       }
-    } catch (e) {
-      print("Error approve: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Terjadi error: $e")));
-    }
-  }
-
-  Future<void> pengembalianPeminjaman(Map<String, dynamic> item) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      final response = await http.post(
-        Uri.parse("$baseUrl/pengembalian"),
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({"id_peminjaman": item["id_peminjaman"]}),
-      );
-
-      if (response.statusCode == 200) {
-        final tanggalJatuhTempo = DateTime.parse(item['tanggal_jatuh_tempo']);
-        final tanggalSekarang = DateTime.now();
-        bool terlambat = tanggalSekarang.isAfter(tanggalJatuhTempo);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(terlambat
-                ? "Pengembalian berhasil! Status: TERLAMBAT"
-                : "Pengembalian berhasil! Status: TEPAT WAKTU"),
-          ),
-        );
-
-        setState(() {
-          peminjamanList.removeWhere(
-              (e) => e["id_peminjaman"] == item["id_peminjaman"]);
-        });
-      } else {
-        final resBody = jsonDecode(response.body);
-        final message = resBody['message'] ?? 'Gagal melakukan pengembalian';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
-      }
-    } catch (e) {
-      print("Error pengembalian: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Terjadi error: $e")));
+    } else {
+      return {"label": status ?? "-", "color": Colors.red, "icon": Icons.error};
     }
   }
 
@@ -142,6 +119,7 @@ class _PeminjamanListPageState extends State<PeminjamanListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Kelola Peminjaman"),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -149,110 +127,119 @@ class _PeminjamanListPageState extends State<PeminjamanListPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const HistoryPeminjamanPage(),
-                ),
+                MaterialPageRoute(builder: (_) => HistoryPeminjamanPage()), // hapus const
               );
             },
-          ),
+          )
         ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : peminjamanList.isEmpty
-              ? const Center(
-                  child: Text("Tidak ada data peminjaman aktif",
-                      style: TextStyle(fontSize: 16)),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: peminjamanList.length,
-                  itemBuilder: (context, index) {
-                    final item = peminjamanList[index];
-                    final isApproved = item['status_pinjam'] == "disetujui";
-
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () async {
-                          final updatedItem = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PeminjamanDetailPage(item: item),
-                            ),
-                          );
-
-                          if (updatedItem != null && updatedItem is Map<String, dynamic>) {
-                            setState(() {
-                              if (updatedItem["status_pinjam"] == "selesai") {
-                                peminjamanList.removeWhere(
-                                    (e) => e["id_peminjaman"] == updatedItem["id_peminjaman"]);
-                              } else {
-                                final idx = peminjamanList.indexWhere(
-                                    (e) => e["id_peminjaman"] == updatedItem["id_peminjaman"]);
-                                if (idx != -1) peminjamanList[idx] = updatedItem;
-                              }
-                            });
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item["judul_buku"] ?? "Judul tidak tersedia",
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 6),
-                              Text("Peminjam: ${item['nama_user'] ?? '-'}"),
-                              Text("Tanggal Pinjam: ${item['tanggal_pinjam'] ?? '-'}"),
-                              Text("Jatuh Tempo: ${item['tanggal_jatuh_tempo'] ?? '-'}"),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Status: ${item['status_pinjam']}",
-                                style: TextStyle(
-                                  color: isApproved ? Colors.blue : Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (!isApproved)
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          approvePeminjaman(item["id_peminjaman"]),
-                                      child: const Text("Approve"),
-                                    ),
-                                  const SizedBox(width: 10),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red),
-                                    onPressed: isApproved
-                                        ? () => pengembalianPeminjaman(item)
-                                        : null,
-                                    child: const Text(
-                                      "Kembalikan",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+              ? const Center(child: Text("Tidak ada data peminjaman"))
+              : RefreshIndicator(
+                  onRefresh: fetchPeminjaman,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: peminjamanList.length,
+                    itemBuilder: (context, index) => _loanCard(peminjamanList[index]),
+                  ),
                 ),
+    );
+  }
+
+  Widget _loanCard(Map<String, dynamic> item) {
+    final statusInfo = getStatusInfo(item);
+
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => PeminjamanDetailPage(item: item)),
+          );
+
+          if (result == true) {
+            fetchPeminjaman(); // refresh list setelah detail di-update
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item["judul_buku"] ?? "-",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusInfo["color"].withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(statusInfo["icon"], size: 14, color: statusInfo["color"]),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusInfo["label"],
+                          style: TextStyle(fontSize: 12, color: statusInfo["color"], fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // INFO
+              _infoRow(Icons.person, "Peminjam", item["nama_user"]),
+              _infoRow(Icons.date_range, "Tanggal Pinjam", safeDate(item["tanggal_pinjam"])),
+              _infoRow(Icons.event, "Jatuh Tempo", safeDate(item["tanggal_jatuh_tempo"])),
+              const Divider(height: 24),
+              _infoRow(Icons.assignment_return, "Tanggal Pengembalian", safeDate(item["tanggal_pengembalian_dipilih"])),
+
+              const SizedBox(height: 10),
+              const Text(
+                "Tap untuk melihat detail",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

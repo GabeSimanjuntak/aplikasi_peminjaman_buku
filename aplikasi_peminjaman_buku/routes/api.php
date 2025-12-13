@@ -7,6 +7,7 @@ use App\Http\Controllers\PeminjamanController;
 use App\Http\Controllers\PengembalianController;
 use App\Http\Controllers\RiwayatController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 
 
 // =====================================================
@@ -43,7 +44,25 @@ Route::middleware(['auth:sanctum', 'isUser'])->group(function () {
 
     // Peminjaman buku
     Route::post('/peminjaman', [PeminjamanController::class, 'store']);
+    //Route::get('/peminjaman/user', [PeminjamanController::class, 'peminjamanUser']);
+    Route::post('/peminjaman/{id}/ajukan-pengembalian', [PeminjamanController::class, 'ajukanPengembalian']);
+    Route::post('/pengembalian/ajukan', [PeminjamanController::class, 'ajukanPengembalian']);
+    Route::get('/loans/{userId}', [PeminjamanController::class, 'getLoansUser']);
+    Route::get('/peminjaman/user/{id}', [PeminjamanController::class, 'getByUser']);
+    Route::post('/peminjaman/create', [PeminjamanController::class, 'store']);
 
+    Route::post('/peminjaman/{id}/cancel', [PeminjamanController::class, 'cancelPeminjaman']);
+    // Ambil profile untuk form
+    Route::get('/profile', function (Request $request) {
+        return response()->json([
+            "success" => true,
+            "data" => $request->user()
+        ]);
+    });
+
+    // Form peminjaman baru (dipilih manual oleh user)
+    Route::post('/peminjaman/form', [PeminjamanController::class, 'storeForm']);
+    
     // Riwayat peminjaman user
     Route::get('/riwayat/user/{id_user}', [RiwayatController::class, 'showByUser']);
 });
@@ -69,16 +88,23 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::delete('/kategori/{id}', [KategoriBukuController::class, 'destroy']);
 
     // Pengembalian buku
-    Route::post('/pengembalian', [PengembalianController::class, 'store']);
-    Route::get('/pengembalian', [PengembalianController::class, 'index']);
+    Route::put('/pengembalian/{id}/approve', [PengembalianController::class, 'approve']);
+    Route::get('/pengembalian/history', [PengembalianController::class, 'history']);
+    // Route::post('/pengembalian', [PengembalianController::class, 'store']);
+    // Route::get('/pengembalian', [PengembalianController::class, 'index']);
+    Route::put('/peminjaman/{id}/approve-pengembalian',
+            [PengembalianController::class, 'approvePengembalian']);
 
     // Peminjaman approval
     Route::get('/peminjaman', [PeminjamanController::class, 'index']);
     Route::post('/peminjaman/{id}/konfirmasi', [PeminjamanController::class, 'konfirmasi']);
-    Route::put('/peminjaman/{id}/pengembalian', [PeminjamanController::class, 'pengembalian']);
+    //Route::put('/peminjaman/{id}/pengembalian', [PeminjamanController::class, 'pengembalian']);
+    //Route::post('/approve-pengembalian/{id}', [PeminjamanController::class, 'approvePengembalian']);
 
     // Semua riwayat
     Route::get('/riwayat', [RiwayatController::class, 'index']);
+
+
 });
 
 

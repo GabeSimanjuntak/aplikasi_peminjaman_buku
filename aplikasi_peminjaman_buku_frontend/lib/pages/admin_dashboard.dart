@@ -32,7 +32,7 @@ class AdminDashboard extends StatelessWidget {
                 _buildCard(Icons.category, "Kategori Buku", Colors.orange, () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const KategoriListPage()),
+                    MaterialPageRoute(builder: (_) => KategoriListPage()),
                   );
                 }),
               ],
