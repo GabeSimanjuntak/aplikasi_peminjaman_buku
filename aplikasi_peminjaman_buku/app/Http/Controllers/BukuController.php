@@ -7,150 +7,182 @@ use Illuminate\Http\Request;
 
 class BukuController extends Controller
 {
+    // =========================
+    // GET: daftar buku
+    // =========================
     public function index()
-{
-    $books = Buku::with('kategori')->get()->map(function($buku) {
-        return [
-            'id' => $buku->id,
-            'judul' => $buku->judul,
-            'penulis' => $buku->penulis,
-            'penerbit' => $buku->penerbit,
-            'tahun' => $buku->tahun,
-            'deskripsi' => $buku->deskripsi,
-            'stok' => $buku->stok,                 // total stok
-            'stok_tersedia' => $buku->stok_tersedia, // stok tersedia saat ini
-            'status' => $buku->status,
-            'kategori' => $buku->kategori,
-        ];
-    });
+    {
+        $books = Buku::with('kategori')->get()->map(function ($buku) {
+            return [
+                'id' => $buku->id,
+                'judul' => $buku->judul,
+                'penulis' => $buku->penulis,
+                'penerbit' => $buku->penerbit,
+                'tahun' => $buku->tahun,
+                'deskripsi' => $buku->deskripsi,
 
-    return response()->json([
-        'success' => true,
-        'data' => $books
-    ]);
-}
+                // KONSISTEN
+                'stok' => $buku->stok_total,
+                'stok_tersedia' => $buku->stok_tersedia,
 
-public function show($id)
-{
-    $buku = Buku::with('kategori')->find($id);
+                'status' => $buku->status,
+                'kategori' => $buku->kategori,
+            ];
+        });
 
-    if (!$buku) {
         return response()->json([
-            'success' => false,
-            'message' => 'Buku tidak ditemukan'
-        ], 404);
-    }
-
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'id' => $buku->id,
-            'judul' => $buku->judul,
-            'penulis' => $buku->penulis,
-            'penerbit' => $buku->penerbit,
-            'tahun' => $buku->tahun,
-            'deskripsi' => $buku->deskripsi,
-            'stok' => $buku->stok,
-            'stok_tersedia' => $buku->stok_tersedia,
-            'status' => $buku->status,
-            'kategori' => $buku->kategori,
-        ]
-    ]);
-}
-
-
-    // POST tambah buku
-    // POST tambah buku
-public function store(Request $request)
-{
-    $request->validate([
-        'judul' => 'required',
-        'penulis' => 'required',
-        'id_kategori' => 'required|integer',
-        'stok' => 'required|integer|min:0',
-    ]);
-
-    $buku = Buku::create([
-        'judul' => $request->judul,
-        'penulis' => $request->penulis,
-        'penerbit' => $request->penerbit,
-        'tahun' => $request->tahun,
-        'deskripsi' => $request->deskripsi,
-        'id_kategori' => $request->id_kategori,
-        'stok' => $request->stok,
-        'stok_tersedia' => $request->stok, // inisialisasi stok tersedia sama dengan stok total
-        'status' => 'tersedia'
-    ]);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Buku berhasil ditambahkan',
-        'data' => $buku
-    ]);
-}
-
-// PUT update buku
-public function update(Request $request, $id)
-{
-    $buku = Buku::find($id);
-
-    if (!$buku) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Buku tidak ditemukan'
-        ], 404);
-    }
-
-    $buku->update([
-        'judul' => $request->judul,
-        'penulis' => $request->penulis,
-        'penerbit' => $request->penerbit,
-        'tahun' => $request->tahun,
-        'deskripsi' => $request->deskripsi,
-        'id_kategori' => $request->id_kategori,
-        'stok' => $request->stok,
-        // Jika stok dikurangi, sesuaikan stok_tersedia agar tidak lebih dari stok
-        'stok_tersedia' => min($buku->stok_tersedia, $request->stok),
-    ]);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Buku berhasil diperbarui',
-        'data' => $buku
-    ]);
-}
-
-    // DELETE buku
-    public function destroy($id)
-{
-    $buku = Buku::find($id);
-
-    if (!$buku) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Buku tidak ditemukan'
-        ], 404);
-    }
-
-    // cek apakah buku masih ada di peminjaman
-    $peminjaman = \App\Models\Peminjaman::where('id_buku', $id)->exists();
-    if ($peminjaman) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Buku ini tidak bisa dihapus karena masih dipinjam'
+            'success' => true,
+            'data' => $books
         ]);
     }
 
-    $buku->delete();
+    // =========================
+    // GET: detail buku
+    // =========================
+    public function show($id)
+    {
+        $buku = Buku::with('kategori')->find($id);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Buku berhasil dihapus'
-    ]);
-}
+        if (!$buku) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku tidak ditemukan'
+            ], 404);
+        }
 
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $buku->id,
+                'judul' => $buku->judul,
+                'penulis' => $buku->penulis,
+                'penerbit' => $buku->penerbit,
+                'tahun' => $buku->tahun,
+                'deskripsi' => $buku->deskripsi,
 
-    // GET buku serupa berdasarkan kategori
+                // KONSISTEN
+                'stok' => $buku->stok_total,
+                'stok_tersedia' => $buku->stok_tersedia,
+
+                'status' => $buku->status,
+                'kategori' => $buku->kategori,
+            ]
+        ]);
+    }
+
+    // =========================
+    // POST: tambah buku
+    // =========================
+    public function store(Request $request)
+    {
+        $request->validate([
+            'judul' => 'required',
+            'penulis' => 'required',
+            'id_kategori' => 'required|integer',
+            'stok' => 'required|integer|min:1',
+        ]);
+
+        $buku = Buku::create([
+            'judul' => $request->judul,
+            'penulis' => $request->penulis,
+            'penerbit' => $request->penerbit,
+            'tahun' => $request->tahun,
+            'deskripsi' => $request->deskripsi,
+            'id_kategori' => $request->id_kategori,
+
+            // ⬇⬇⬇ INI WAJIB ADA
+            'stok_total' => $request->stok,
+            'stok_tersedia' => $request->stok,
+
+            'status' => 'tersedia'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Buku berhasil ditambahkan',
+            'data' => $buku
+        ], 201);
+    }
+
+    // =========================
+    // PUT: update buku
+    // =========================
+    public function update(Request $request, $id)
+    {
+        $buku = Buku::find($id);
+
+        if (!$buku) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku tidak ditemukan'
+            ], 404);
+        }
+
+        $request->validate([
+            'judul' => 'required|string',
+            'penulis' => 'required|string',
+            'id_kategori' => 'required|integer',
+            'stok' => 'required|integer|min:1',
+        ]);
+
+        $stokBaru = $request->stok;
+
+        $buku->update([
+            'judul' => $request->judul,
+            'penulis' => $request->penulis,
+            'penerbit' => $request->penerbit,
+            'tahun' => $request->tahun,
+            'deskripsi' => $request->deskripsi,
+            'id_kategori' => $request->id_kategori,
+
+            // JAGA KONSISTENSI
+            'stok_total' => $stokBaru,
+            'stok_tersedia' => min($buku->stok_tersedia, $stokBaru),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Buku berhasil diperbarui',
+            'data' => $buku
+        ]);
+    }
+
+    // =========================
+    // DELETE: hapus buku
+    // =========================
+    public function destroy($id)
+    {
+        $buku = Buku::find($id);
+
+        if (!$buku) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku tidak ditemukan'
+            ], 404);
+        }
+
+        $masihDipinjam = \App\Models\Peminjaman::where('id_buku', $id)
+            ->whereIn('status_pinjam', ['dipinjam', 'menunggu_pengembalian'])
+            ->exists();
+
+        if ($masihDipinjam) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku tidak bisa dihapus karena masih dipinjam'
+            ]);
+        }
+
+        $buku->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Buku berhasil dihapus'
+        ]);
+    }
+
+    // =========================
+    // GET: buku serupa
+    // =========================
     public function bukuSerupa($id)
     {
         $buku = Buku::find($id);

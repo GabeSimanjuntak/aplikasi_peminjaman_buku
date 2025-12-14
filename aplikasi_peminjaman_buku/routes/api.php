@@ -62,7 +62,7 @@ Route::middleware(['auth:sanctum', 'isUser'])->group(function () {
 
     // Form peminjaman baru (dipilih manual oleh user)
     Route::post('/peminjaman/form', [PeminjamanController::class, 'storeForm']);
-    
+
     // Riwayat peminjaman user
     Route::get('/riwayat/user/{id_user}', [RiwayatController::class, 'showByUser']);
 });

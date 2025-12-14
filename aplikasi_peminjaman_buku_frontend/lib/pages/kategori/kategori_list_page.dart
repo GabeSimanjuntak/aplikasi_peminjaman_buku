@@ -73,7 +73,6 @@ class _KategoriListPageState extends State<KategoriListPage> {
               final kategori = data[i];
               return ListTile(
                 title: Text(kategori["nama_kategori"]),
-                subtitle: Text("Stok: ${kategori['stok']}"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -83,7 +82,8 @@ class _KategoriListPageState extends State<KategoriListPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => KategoriEditPage(kategori: kategori),
+                            builder: (_) =>
+                                KategoriEditPage(kategori: kategori),
                           ),
                         ).then((_) => loadData());
                       },

@@ -132,8 +132,31 @@ ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL;
 	/Modifikasi db/
 	-- 1. Tambah kolom stok
 ALTER TABLE buku
-ADD COLUMN stok_total INT DEFAULT 1,
-ADD COLUMN stok_tersedia INT DEFAULT 1;
+ALTER COLUMN stok_tersedia DROP DEFAULT;
+ALTER TABLE buku
+ALTER COLUMN stok_tersedia SET NOT NULL;
+
+UPDATE buku
+SET stok_tersedia = stok_total
+WHERE stok_tersedia < stok_total
+AND id NOT IN (
+    SELECT DISTINCT id_buku
+    FROM peminjaman
+    WHERE status_pinjam IN (
+        'dipinjam',
+        'menunggu_pengembalian'
+    )
+);
+
+ALTER TABLE buku
+ADD CONSTRAINT chk_stok_valid
+CHECK (
+    stok_tersedia >= 0
+    AND stok_tersedia <= stok_total
+);
+
+SELECT id, judul, stok_total, stok_tersedia
+FROM buku;
 
 -- 2. Ubah cek status (opsional) — hapus constraint chk_status_valid karena kita pakai stok
 ALTER TABLE buku DROP CONSTRAINT IF EXISTS chk_status_valid;
@@ -197,3 +220,138 @@ DROP FUNCTION IF EXISTS set_status_buku_dikembalikan();
 
 ALTER TABLE users
 ADD COLUMN angkatan VARCHAR(10);
+
+ALTER TABLE peminjaman
+ALTER COLUMN tanggal_pinjam DROP DEFAULT;
+
+SELECT * FROM view_riwayat_peminjaman;
+
+CREATE OR REPLACE VIEW view_riwayat_peminjaman AS
+SELECT
+    p.id AS id_peminjaman,
+    p.id_user,
+    u.nama AS nama_user,
+    b.judul AS judul_buku,
+    p.tanggal_pinjam,
+    p.tanggal_jatuh_tempo,
+    pg.tanggal_kembali,
+    p.status_pinjam
+FROM peminjaman p
+JOIN users u ON p.id_user = u.id
+JOIN buku b ON p.id_buku = b.id;
+
+ALTER TABLE peminjaman ADD COLUMN tanggal_pengembalian_dipilih DATE NULL;
+
+
+ALTER TABLE peminjaman 
+DROP CONSTRAINT chk_status_pinjam_valid;
+
+ALTER TABLE peminjaman 
+ADD CONSTRAINT chk_status_pinjam_valid CHECK (
+    status_pinjam IN (
+        'dipinjam',
+        'menunggu',
+        'dikembalikan',
+        'pengajuan_kembali'
+    )
+);
+
+
+SELECT *
+FROM peminjaman
+WHERE status_pinjam NOT IN (
+    'dipinjam',
+    'menunggu_persetujuan',
+    'pengajuan_kembali',
+    'dikembalikan'
+);
+
+
+ALTER TABLE peminjaman 
+DROP CONSTRAINT IF EXISTS chk_status_pinjam_valid;
+
+ALTER TABLE peminjaman 
+ADD CONSTRAINT chk_status_pinjam_valid CHECK (
+    status_pinjam IN (
+        'dipinjam',
+        'menunggu_persetujuan',
+        'pengajuan_kembali',
+        'dikembalikan'
+    )
+);
+SELECT DISTINCT status_pinjam FROM peminjaman;
+
+UPDATE peminjaman
+SET status_pinjam = 'menunggu_persetujuan'
+WHERE status_pinjam = 'pending';
+
+UPDATE peminjaman
+SET status_pinjam = 'dipinjam'
+WHERE status_pinjam = 'aktif';
+
+SELECT DISTINCT status_pinjam FROM peminjaman;
+
+ALTER TABLE peminjaman 
+ADD CONSTRAINT chk_status_pinjam_valid CHECK (
+    status_pinjam IN (
+        'dipinjam',
+        'menunggu_persetujuan',
+        'pengajuan_kembali',
+        'menunggu_pengembalian',
+        'dikembalikan'
+    )
+);
+
+
+SELECT conname
+FROM pg_constraint
+WHERE conname LIKE '%status_pinjam%';
+
+UPDATE peminjaman SET status_pinjam = 'menunggu_persetujuan' WHERE status_pinjam = 'pending';
+UPDATE peminjaman SET status_pinjam = 'dipinjam' WHERE status_pinjam = 'aktif';
+UPDATE peminjaman SET status_pinjam = 'dikembalikan' WHERE status_pinjam = 'selesai';
+UPDATE peminjaman
+SET status_pinjam = 'pengajuan_kembali'
+WHERE status_pinjam = 'diajukan';
+
+DELETE FROM peminjaman WHERE status_pinjam = 'ditolak'; -- kalau tidak dibutuhkan
+
+SELECT id, status_pinjam FROM peminjaman WHERE id = 2;
+
+DESCRIBE peminjaman;
+
+SELECT
+  p.id,
+  p.tanggal_pinjam,
+  p.tanggal_jatuh_tempo,
+  p.status_pinjam,
+  pg.tanggal_kembali
+FROM peminjaman p
+JOIN pengembalian pg ON pg.id_peminjaman = p.id
+WHERE p.status_pinjam = 'dikembalikan';
+
+SELECT id, status_pinjam FROM peminjaman;
+
+SELECT * FROM pengembalian;
+
+SELECT p.id AS id_peminjaman,
+       p.status_pinjam,
+       g.tanggal_kembali
+FROM peminjaman p
+JOIN pengembalian g 
+    ON g.id_peminjaman = p.id;
+
+SELECT * FROM migrations ORDER BY batch, migration;
+
+INSERT INTO migrations (migration, batch) 
+VALUES ('2025_12_12_012132_add_stok_tersedia_to_buku_table', 3);
+
+ALTER TABLE peminjaman 
+MODIFY status_pinjam ENUM(
+  'menunggu_persetujuan',
+  'dipinjam',
+  'pengajuan_kembali',
+  'dikembalikan',
+  'ditolak',
+  'dibatalkan'
+) NOT NULL;

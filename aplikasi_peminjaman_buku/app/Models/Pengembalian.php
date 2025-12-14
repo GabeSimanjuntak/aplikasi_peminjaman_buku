@@ -14,5 +14,5 @@ class Pengembalian extends Model
         'id_peminjaman',
         'tanggal_kembali'
     ];
-    
+
 }

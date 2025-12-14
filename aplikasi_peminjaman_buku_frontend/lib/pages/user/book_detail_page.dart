@@ -20,14 +20,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
     loadBookDetail();
   }
 
+  // ===============================
+  // LOAD DETAIL BUKU
+  // ===============================
   Future<void> loadBookDetail() async {
     try {
       final fetchedBook = await ApiService.getBookDetail(widget.bookId);
+
       setState(() {
-        book = fetchedBook.isNotEmpty ? fetchedBook : null;
+        book = fetchedBook;
         isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
         book = null;
         isLoading = false;
@@ -35,63 +39,64 @@ class _BookDetailPageState extends State<BookDetailPage> {
     }
   }
 
-  // ============================================================
+  // ===============================
   // KONFIRMASI PEMINJAMAN
-  // ============================================================
+  // ===============================
   void _confirmAjukanPeminjaman() {
-  if ((book!['stok_tersedia'] ?? 0) <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Buku tidak tersedia, tidak bisa meminjam"),
-        backgroundColor: Colors.red,
+    if ((book!['stok_tersedia'] ?? 0) <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Stok buku habis, tidak bisa meminjam"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Konfirmasi Peminjaman"),
+        content: const Text(
+          "Pengajuan peminjaman akan dikirim dan menunggu persetujuan admin.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final res = await ApiService.pinjamBuku(widget.bookId);
+
+              if (!mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    res["success"] == true
+                        ? "Pengajuan berhasil dikirim"
+                        : res["message"] ?? "Gagal mengajukan peminjaman",
+                  ),
+                ),
+              );
+
+              if (res["success"] == true) {
+                loadBookDetail(); // refresh stok
+              }
+            },
+            child: const Text("Ajukan"),
+          ),
+        ],
       ),
     );
-    return;
   }
 
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text("Konfirmasi Peminjaman"),
-      content: const Text(
-        "Pengajuan akan dikirim dan menunggu persetujuan admin.",
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Batal"),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            final res = await ApiService.pinjamBuku(widget.bookId);
-
-            if (!mounted) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  res["success"] == true
-                      ? "Pengajuan berhasil dikirim"
-                      : res["message"] ?? "Gagal mengajukan peminjaman",
-                ),
-              ),
-            );
-
-            if (res["success"] == true) loadBookDetail();
-          },
-          child: const Text("Ajukan"),
-        ),
-      ],
-    ),
-  );
-}
-
-
-  // ============================================================
+  // ===============================
   // UI
-  // ============================================================
+  // ===============================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,100 +104,91 @@ class _BookDetailPageState extends State<BookDetailPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : book == null
-              ? const Center(child: Text("Buku tidak ditemukan"))
-              : CustomScrollView(
-                  slivers: [
-                    /// ===== HEADER =====
-                    SliverAppBar(
-                        expandedHeight: 170,
-                        pinned: true,
-                        backgroundColor: Colors.blue,
-                        centerTitle: false, // ✅ RATA KIRI
-                        title: const Text(
-                          "Detail Buku",
-                          style: TextStyle(
-                            color: Colors.white, // ✅ WARNA PUTIH
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        flexibleSpace: FlexibleSpaceBar(
-                          background: Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.blue, Colors.blueAccent],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 65, 20, 8),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  /// ===== ICON BUKU =====
-                                  Icon(
-                                    Icons.menu_book,
-                                    size: 64,
-                                    color: Colors.white.withOpacity(0.9),
-                                  ),
-
-                                  const SizedBox(height:6),
-
-                                  /// ===== JUDUL BUKU (CENTER) =====
-                                  Text(
-                                    book!['judul'] ?? '-',
-                                    textAlign: TextAlign.center,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+          ? const Center(child: Text("Buku tidak ditemukan"))
+          : CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 170,
+                  pinned: true,
+                  backgroundColor: Colors.blue,
+                  title: const Text(
+                    "Detail Buku",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue, Colors.blueAccent],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                         ),
                       ),
-
-
-
-                    /// ===== CONTENT =====
-                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(20, 70, 20, 10),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _infoCard(),
-                            const SizedBox(height: 16),
-                            _descriptionCard(),
-                            const SizedBox(height: 90),
+                            const Icon(
+                              Icons.menu_book,
+                              size: 64,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              book!['judul'] ?? "-",
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    )
-                  ],
+                    ),
+                  ),
                 ),
 
-      /// ===== BOTTOM BUTTON =====
-      floatingActionButton: book == null || (book!['stok_tersedia'] ?? 0) <= 0
-    ? null // tombol tidak muncul jika stok habis
-    : FloatingActionButton.extended(
-        onPressed: _confirmAjukanPeminjaman,
-        icon: const Icon(Icons.bookmark_add),
-        label: const Text("Ajukan Peminjaman"),
-      ),
+                // ================= CONTENT =================
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _infoCard(),
+                        const SizedBox(height: 16),
+                        _descriptionCard(),
+                        const SizedBox(height: 90),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
+      // ================= FLOATING BUTTON =================
+      floatingActionButton: (book == null || (book!['stok_tersedia'] ?? 0) <= 0)
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _confirmAjukanPeminjaman,
+              icon: const Icon(Icons.bookmark_add),
+              label: const Text("Ajukan Peminjaman"),
+            ),
     );
   }
 
-  /// ================= INFO CARD =================
+  // ================= INFO CARD =================
   Widget _infoCard() {
-    bool isAvailable = (book!['stok'] ?? 0) > 0;
+    final int stokTotal = book!['stok'] ?? 0;
+    final int stokTersedia = book!['stok_tersedia'] ?? 0;
+    final bool isAvailable = stokTersedia > 0;
 
     return Card(
       elevation: 3,
@@ -201,22 +197,30 @@ class _BookDetailPageState extends State<BookDetailPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _infoRow(Icons.person, "Penulis", book!['penulis']),
-            _infoRow(Icons.business, "Penerbit", book!['penerbit']),
+            _infoRow(Icons.person, "Penulis", book!['penulis'] ?? "-"),
+            _infoRow(Icons.business, "Penerbit", book!['penerbit'] ?? "-"),
             _infoRow(Icons.date_range, "Tahun", book!['tahun'].toString()),
             _infoRow(
               Icons.category,
               "Kategori",
               book!['kategori']?['nama_kategori'] ?? "-",
             ),
+            _infoRow(Icons.inventory, "Total Stok", stokTotal.toString()),
+            _infoRow(
+              Icons.check_circle,
+              "Stok Tersedia",
+              stokTersedia.toString(),
+            ),
             const SizedBox(height: 10),
 
-            /// ===== STOCK BADGE =====
+            // BADGE STOK
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isAvailable
                       ? Colors.green.withOpacity(0.15)
@@ -224,45 +228,38 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isAvailable ? "Stok Tersedia" : "Stok Habis",
+                  isAvailable ? "Tersedia ($stokTersedia)" : "Stok Habis",
                   style: TextStyle(
                     color: isAvailable ? Colors.green : Colors.red,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// ================= DESCRIPTION CARD =================
+  // ================= DESCRIPTION =================
   Widget _descriptionCard() {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.infinity, // ✅ FULL LEBAR LAYAR
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               "Deskripsi",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               book!['deskripsi'] ?? "-",
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.6,
-              ),
+              style: const TextStyle(fontSize: 14, height: 1.6),
             ),
           ],
         ),
@@ -270,7 +267,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
     );
   }
 
-  /// ================= INFO ROW =================
+  // ================= INFO ROW =================
   Widget _infoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -280,19 +277,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
           const SizedBox(width: 10),
           Text(
             "$label:",
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -10,11 +10,12 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderStateMixin {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
   final formKey = GlobalKey<FormState>();
   bool loading = false;
   bool obscurePass = true;
-  
+
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
@@ -24,13 +25,12 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   late Animation<double> _textOpacityAnimation; // ✅ Tambah animation untuk text
 
   final namaCtrl = TextEditingController();
-  final usernameCtrl = TextEditingController(); // ✅
   final emailCtrl = TextEditingController();
   final nimCtrl = TextEditingController();
   final prodiCtrl = TextEditingController();
   final angkatanCtrl = TextEditingController();
   final passCtrl = TextEditingController();
-  
+
   final FocusNode _namaFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _nimFocusNode = FocusNode();
@@ -41,50 +41,45 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.7, curve: Curves.easeInOut),
       ),
     );
-    
+
     _slideAnimation = Tween<double>(begin: 60.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.2, 0.9, curve: Curves.easeOutBack),
       ),
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.3, 1.0, curve: Curves.elasticOut),
       ),
     );
-    
+
     _colorAnimation = ColorTween(
       begin: Colors.white,
       end: const Color(0xFFF0F8FF),
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
     _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.6, 1.0, curve: Curves.easeInOut),
       ),
     );
-    
+
     // ✅ Tambah animation untuk text GAIRMOS LIBRARY
     _textOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -92,7 +87,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
         curve: const Interval(0.7, 1.0, curve: Curves.easeIn),
       ),
     );
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.forward();
     });
@@ -108,7 +103,6 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
     _angkatanFocusNode.dispose();
     _passwordFocusNode.dispose();
     namaCtrl.dispose();
-    usernameCtrl.dispose();
     emailCtrl.dispose();
     nimCtrl.dispose();
     prodiCtrl.dispose();
@@ -121,16 +115,15 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
     if (!formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
-    
+
     // Button press animation
     _controller.animateTo(0.8, duration: const Duration(milliseconds: 200));
-    
+
     await Future.delayed(const Duration(milliseconds: 100));
-    
+
     try {
       final res = await ApiService.register(
         nama: namaCtrl.text.trim(),
-        username: usernameCtrl.text.trim(), // ✅ FIX UTAMA
         email: emailCtrl.text.trim(),
         nim: nimCtrl.text.trim(),
         prodi: prodiCtrl.text.trim(),
@@ -144,10 +137,10 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
 
         // Success animation
         _controller.animateTo(1.0, duration: const Duration(milliseconds: 500));
-        
+
         // Add success visual feedback
         await Future.delayed(const Duration(milliseconds: 300));
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -185,7 +178,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
 
         // Navigate back with animation
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
@@ -236,26 +229,17 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(
-                Icons.error,
-                color: Colors.red,
-                size: 18,
-              ),
+              child: const Icon(Icons.error, color: Colors.red, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 14),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 14)),
             ),
           ],
         ),
         backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(20),
         duration: const Duration(seconds: 3),
       ),
@@ -275,10 +259,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF2C3E50),
-                  Color(0xFF3498DB),
-                ],
+                colors: [Color(0xFF2C3E50), Color(0xFF3498DB)],
               ),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
@@ -305,7 +286,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                     ),
                   ),
                 ),
-                
+
                 // Book spine
                 Positioned(
                   left: 30,
@@ -327,7 +308,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                     ),
                   ),
                 ),
-                
+
                 // Book icon (gunakan icon register)
                 const Center(
                   child: Icon(
@@ -336,7 +317,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                     color: Colors.white,
                   ),
                 ),
-                
+
                 // Shine effect
                 Positioned(
                   top: 25,
@@ -380,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
         builder: (context, child) {
           final offset = 20 * (1 - _controller.value);
           final opacity = _controller.value;
-          
+
           return Transform.translate(
             offset: Offset(0, offset),
             child: Opacity(
@@ -391,10 +372,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: color.withOpacity(0.3),
-                    width: 2,
-                  ),
+                  border: Border.all(color: color.withOpacity(0.3), width: 2),
                   boxShadow: [
                     BoxShadow(
                       color: color.withOpacity(0.2),
@@ -403,11 +381,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.book,
-                  color: color,
-                  size: size * 0.6,
-                ),
+                child: Icon(Icons.book, color: color, size: size * 0.6),
               ),
             ),
           );
@@ -436,10 +410,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       onFieldSubmitted: (_) => onSubmitted(),
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ),
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.grey[50],
@@ -449,17 +420,11 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(
-            color: Colors.grey[300]!,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(
-            color: Color(0xFF3498DB),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF3498DB), width: 2),
         ),
         labelText: label,
         labelStyle: TextStyle(
@@ -476,11 +441,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
               bottomLeft: Radius.circular(15),
             ),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 22,
-          ),
+          child: Icon(icon, color: Colors.white, size: 22),
         ),
         suffixIcon: isPassword && onToggleObscure != null
             ? AnimatedContainer(
@@ -490,10 +451,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                   icon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     transitionBuilder: (child, animation) {
-                      return ScaleTransition(
-                        scale: animation,
-                        child: child,
-                      );
+                      return ScaleTransition(scale: animation, child: child);
                     },
                     child: obscureText!
                         ? const Icon(
@@ -527,147 +485,12 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
         builder: (context, child) {
           return Container(
             decoration: BoxDecoration(
-<<<<<<< HEAD
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                )
-              ],
-            ),
-            child: Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  const Text(
-                    "Create Account",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF667EEA),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // FULL NAME
-                  TextFormField(
-                    controller: namaCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Full Name",
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (v) =>
-                        v!.isEmpty ? "Full name required" : null,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // EMAIL
-                  TextFormField(
-                    controller: emailCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Email",
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                    validator: (v) {
-                      if (v!.isEmpty) return "Email required";
-                      if (!v.contains("@")) return "Email invalid";
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-
-                  // NIM
-                  TextFormField(
-                    controller: nimCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "NIM",
-                      prefixIcon: Icon(Icons.numbers),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      usernameCtrl.text = value; // ✅ username = NIM
-                    },
-                    validator: (v) =>
-                        v!.isEmpty ? "NIM required" : null,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // PRODI
-                  TextFormField(
-                    controller: prodiCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Prodi",
-                      prefixIcon: Icon(Icons.school),
-                    ),
-                    validator: (v) =>
-                        v!.isEmpty ? "Prodi required" : null,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // PASSWORD
-                  TextFormField(
-                    controller: passCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: "Password",
-                      prefixIcon: Icon(Icons.lock),
-                    ),
-                    validator: (v) =>
-                        v!.length < 6 ? "Minimum 6 characters" : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // BUTTON
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: loading ? null : register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF667EEA),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: loading
-                          ? const CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2)
-                          : const Text(
-                              "Register",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  GestureDetector(
-                    onTap: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                    ),
-                    child: const Text(
-                      "Already have an account? Login",
-                      style: TextStyle(
-                        color: Color(0xFF667EEA),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-=======
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.white,
                   _colorAnimation.value ?? const Color(0xFFF0F8FF),
->>>>>>> 02ae15b6b4125cadb747b4770eaa8ed77f698c2c
                 ],
               ),
             ),
@@ -703,7 +526,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                 color: Colors.purple.shade400,
                 size: 28,
               ),
-              
+
               // Main content
               Center(
                 child: SingleChildScrollView(
@@ -741,27 +564,30 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
                                       colors: [
-                                        const Color(0xFF3498DB).withOpacity(0.3),
+                                        const Color(
+                                          0xFF3498DB,
+                                        ).withOpacity(0.3),
                                         Colors.transparent,
                                       ],
                                     ),
                                   ),
                                 ),
-                                
+
                                 // Animated book icon
                                 _buildAnimatedBookIcon(),
-                                
+
                                 // Success indicator
                                 Positioned(
                                   right: 10,
                                   bottom: 10,
                                   child: ScaleTransition(
-                                    scale: Tween<double>(begin: 0.0, end: 1.0).animate(
-                                      CurvedAnimation(
-                                        parent: _controller,
-                                        curve: const Interval(0.8, 1.0),
-                                      ),
-                                    ),
+                                    scale: Tween<double>(begin: 0.0, end: 1.0)
+                                        .animate(
+                                          CurvedAnimation(
+                                            parent: _controller,
+                                            curve: const Interval(0.8, 1.0),
+                                          ),
+                                        ),
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
@@ -769,7 +595,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.green.withOpacity(0.5),
+                                            color: Colors.green.withOpacity(
+                                              0.5,
+                                            ),
                                             blurRadius: 15,
                                           ),
                                         ],
@@ -784,9 +612,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                 ),
                               ],
                             ),
-                            
+
                             const SizedBox(height: 20),
-                            
+
                             // ✅ GAIRMOS LIBRARY Text dengan animasi (sama seperti Login Page)
                             AnimatedOpacity(
                               opacity: _textOpacityAnimation.value,
@@ -824,9 +652,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 40),
-                        
+
                         // Register form
                         Material(
                           elevation: 25,
@@ -842,10 +670,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.white,
-                                  const Color(0xFFF8FAFF),
-                                ],
+                                colors: [Colors.white, const Color(0xFFF8FAFF)],
                               ),
                               border: Border.all(
                                 color: Colors.grey.shade200,
@@ -869,10 +694,14 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                               Color(0xFF3498DB),
                                             ],
                                           ),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: const Color(0xFF3498DB).withOpacity(0.3),
+                                              color: const Color(
+                                                0xFF3498DB,
+                                              ).withOpacity(0.3),
                                               blurRadius: 10,
                                               offset: const Offset(0, 5),
                                             ),
@@ -887,7 +716,8 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                       const SizedBox(width: 15),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               "Formulir Pendaftaran",
@@ -910,9 +740,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                       ),
                                     ],
                                   ),
-                                  
+
                                   const SizedBox(height: 30),
-                                  
+
                                   // Nama Lengkap
                                   _buildTextField(
                                     controller: namaCtrl,
@@ -921,12 +751,15 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     icon: Icons.person_outline_rounded,
                                     keyboardType: TextInputType.name,
                                     textInputAction: TextInputAction.next,
-                                    onSubmitted: () => _emailFocusNode.requestFocus(),
-                                    validator: (v) => v!.isEmpty ? "Nama lengkap wajib diisi" : null,
+                                    onSubmitted: () =>
+                                        _emailFocusNode.requestFocus(),
+                                    validator: (v) => v!.isEmpty
+                                        ? "Nama lengkap wajib diisi"
+                                        : null,
                                   ),
-                                  
+
                                   const SizedBox(height: 20),
-                                  
+
                                   // Email
                                   _buildTextField(
                                     controller: emailCtrl,
@@ -935,18 +768,21 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     icon: Icons.email_outlined,
                                     keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
-                                    onSubmitted: () => _nimFocusNode.requestFocus(),
+                                    onSubmitted: () =>
+                                        _nimFocusNode.requestFocus(),
                                     validator: (v) {
-                                      if (v!.isEmpty) return "Email wajib diisi";
-                                      if (!v.contains("@") || !v.contains(".")) {
+                                      if (v!.isEmpty)
+                                        return "Email wajib diisi";
+                                      if (!v.contains("@") ||
+                                          !v.contains(".")) {
                                         return "Format email tidak valid";
                                       }
                                       return null;
                                     },
                                   ),
-                                  
+
                                   const SizedBox(height: 20),
-                                  
+
                                   // NIM
                                   _buildTextField(
                                     controller: nimCtrl,
@@ -955,12 +791,14 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     icon: Icons.numbers_rounded,
                                     keyboardType: TextInputType.number,
                                     textInputAction: TextInputAction.next,
-                                    onSubmitted: () => _prodiFocusNode.requestFocus(),
-                                    validator: (v) => v!.isEmpty ? "NIM wajib diisi" : null,
+                                    onSubmitted: () =>
+                                        _prodiFocusNode.requestFocus(),
+                                    validator: (v) =>
+                                        v!.isEmpty ? "NIM wajib diisi" : null,
                                   ),
-                                  
+
                                   const SizedBox(height: 20),
-                                  
+
                                   // Prodi
                                   _buildTextField(
                                     controller: prodiCtrl,
@@ -969,12 +807,15 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     icon: Icons.school_outlined,
                                     keyboardType: TextInputType.text,
                                     textInputAction: TextInputAction.next,
-                                    onSubmitted: () => _angkatanFocusNode.requestFocus(),
-                                    validator: (v) => v!.isEmpty ? "Program studi wajib diisi" : null,
+                                    onSubmitted: () =>
+                                        _angkatanFocusNode.requestFocus(),
+                                    validator: (v) => v!.isEmpty
+                                        ? "Program studi wajib diisi"
+                                        : null,
                                   ),
-                                  
+
                                   const SizedBox(height: 20),
-                                  
+
                                   // Angkatan
                                   _buildTextField(
                                     controller: angkatanCtrl,
@@ -983,17 +824,21 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     icon: Icons.calendar_today_outlined,
                                     keyboardType: TextInputType.number,
                                     textInputAction: TextInputAction.next,
-                                    onSubmitted: () => _passwordFocusNode.requestFocus(),
+                                    onSubmitted: () =>
+                                        _passwordFocusNode.requestFocus(),
                                     validator: (v) {
-                                      if (v!.isEmpty) return "Angkatan wajib diisi";
-                                      if (v.length != 4) return "Gunakan format 4 digit";
-                                      if (int.tryParse(v) == null) return "Harus berupa angka";
+                                      if (v!.isEmpty)
+                                        return "Angkatan wajib diisi";
+                                      if (v.length != 4)
+                                        return "Gunakan format 4 digit";
+                                      if (int.tryParse(v) == null)
+                                        return "Harus berupa angka";
                                       return null;
                                     },
                                   ),
-                                  
+
                                   const SizedBox(height: 20),
-                                  
+
                                   // Password
                                   _buildTextField(
                                     controller: passCtrl,
@@ -1003,16 +848,20 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     keyboardType: TextInputType.visiblePassword,
                                     textInputAction: TextInputAction.done,
                                     onSubmitted: register,
-                                    validator: (v) => v!.length < 6 ? "Minimal 6 karakter" : null,
+                                    validator: (v) => v!.length < 6
+                                        ? "Minimal 6 karakter"
+                                        : null,
                                     isPassword: true,
                                     obscureText: obscurePass,
                                     onToggleObscure: () {
-                                      setState(() => obscurePass = !obscurePass);
+                                      setState(
+                                        () => obscurePass = !obscurePass,
+                                      );
                                     },
                                   ),
-                                  
+
                                   const SizedBox(height: 30),
-                                  
+
                                   // Register button
                                   AnimatedContainer(
                                     duration: const Duration(milliseconds: 300),
@@ -1023,7 +872,10 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                         begin: Alignment.centerLeft,
                                         end: Alignment.centerRight,
                                         colors: loading
-                                            ? [Colors.grey[400]!, Colors.grey[500]!]
+                                            ? [
+                                                Colors.grey[400]!,
+                                                Colors.grey[500]!,
+                                              ]
                                             : [
                                                 const Color(0xFF2C3E50),
                                                 const Color(0xFF3498DB),
@@ -1033,7 +885,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                           ? []
                                           : [
                                               BoxShadow(
-                                                color: const Color(0xFF2C3E50).withOpacity(0.4),
+                                                color: const Color(
+                                                  0xFF2C3E50,
+                                                ).withOpacity(0.4),
                                                 blurRadius: 15,
                                                 offset: const Offset(0, 6),
                                               ),
@@ -1045,35 +899,45 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                       child: InkWell(
                                         onTap: loading ? null : register,
                                         borderRadius: BorderRadius.circular(15),
-                                        splashColor: Colors.white.withOpacity(0.3),
+                                        splashColor: Colors.white.withOpacity(
+                                          0.3,
+                                        ),
                                         child: Stack(
                                           alignment: Alignment.center,
                                           children: [
                                             AnimatedOpacity(
                                               opacity: loading ? 0 : 1,
-                                              duration: const Duration(milliseconds: 200),
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
                                               child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 children: [
                                                   Text(
                                                     "DAFTAR SEKARANG",
                                                     style: const TextStyle(
                                                       fontSize: 16,
-                                                      fontWeight: FontWeight.w700,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                       color: Colors.white,
                                                       letterSpacing: 1.2,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 10),
                                                   AnimatedContainer(
-                                                    duration: const Duration(milliseconds: 300),
-                                                    transform: Matrix4.translationValues(
-                                                      loading ? 20 : 0,
-                                                      0,
-                                                      0,
+                                                    duration: const Duration(
+                                                      milliseconds: 300,
                                                     ),
+                                                    transform:
+                                                        Matrix4.translationValues(
+                                                          loading ? 20 : 0,
+                                                          0,
+                                                          0,
+                                                        ),
                                                     child: const Icon(
-                                                      Icons.arrow_forward_rounded,
+                                                      Icons
+                                                          .arrow_forward_rounded,
                                                       color: Colors.white,
                                                       size: 22,
                                                     ),
@@ -1087,9 +951,10 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                                 height: 26,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 3,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                    Colors.white,
-                                                  ),
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.white),
                                                 ),
                                               ),
                                           ],
@@ -1097,9 +962,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                       ),
                                     ),
                                   ),
-                                  
+
                                   const SizedBox(height: 25),
-                                  
+
                                   // Divider
                                   Row(
                                     children: [
@@ -1110,7 +975,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                         ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 15,
+                                        ),
                                         child: Text(
                                           "atau",
                                           style: TextStyle(
@@ -1128,9 +995,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                       ),
                                     ],
                                   ),
-                                  
+
                                   const SizedBox(height: 25),
-                                  
+
                                   // Login button
                                   AnimatedContainer(
                                     duration: const Duration(milliseconds: 300),
@@ -1151,21 +1018,29 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                           Navigator.pushReplacement(
                                             context,
                                             PageRouteBuilder(
-                                              pageBuilder: (_, __, ___) => const LoginPage(),
-                                              transitionsBuilder: (_, animation, __, child) {
-                                                return FadeTransition(
-                                                  opacity: animation,
-                                                  child: child,
-                                                );
-                                              },
-                                              transitionDuration: const Duration(milliseconds: 500),
+                                              pageBuilder: (_, __, ___) =>
+                                                  const LoginPage(),
+                                              transitionsBuilder:
+                                                  (_, animation, __, child) {
+                                                    return FadeTransition(
+                                                      opacity: animation,
+                                                      child: child,
+                                                    );
+                                                  },
+                                              transitionDuration:
+                                                  const Duration(
+                                                    milliseconds: 500,
+                                                  ),
                                             ),
                                           );
                                         },
                                         borderRadius: BorderRadius.circular(12),
-                                        splashColor: const Color(0xFF3498DB).withOpacity(0.1),
+                                        splashColor: const Color(
+                                          0xFF3498DB,
+                                        ).withOpacity(0.1),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             const Icon(
                                               Icons.login_rounded,
@@ -1191,7 +1066,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 30),
                       ],
                     ),
