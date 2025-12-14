@@ -36,9 +36,12 @@ class _UserLoansPageState extends State<UserLoansPage> {
     try {
       final data = await ApiService.getLoanHistoryUser(userId);
 
-      loans = data.map<Map<String, dynamic>>(
-        (e) => Map<String, dynamic>.from(e),
-      ).toList();
+      loans = data
+        .where((e) => e['status_pinjam'] != 'dibatalkan')
+        .map<Map<String, dynamic>>(
+          (e) => Map<String, dynamic>.from(e),
+        )
+        .toList();
 
       setState(() => isLoading = false);
     } catch (e) {
@@ -46,6 +49,53 @@ class _UserLoansPageState extends State<UserLoansPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat data: $e")),
       );
+    }
+  }
+
+  // ================= CANCEL PEMINJAMAN =================
+  Future<void> _cancelPeminjaman(int idPeminjaman) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Batalkan Peminjaman"),
+        content:
+            const Text("Apakah Anda yakin ingin membatalkan peminjaman ini?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Tidak"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Ya"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => isSubmitting = true);
+
+    try {
+      final res = await ApiService.cancelPeminjaman(idPeminjaman);
+
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Peminjaman berhasil dibatalkan")),
+        );
+        _loadLoans();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? "Gagal membatalkan")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => isSubmitting = false);
     }
   }
 
@@ -71,39 +121,21 @@ class _UserLoansPageState extends State<UserLoansPage> {
 
     if (pickedDate == null) return;
 
-    if (pickedDate.isBefore(tanggalPinjam)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Tanggal pengembalian tidak boleh sebelum tanggal peminjaman")),
-      );
-      return;
-    }
-
     setState(() => isSubmitting = true);
 
     try {
       final result = await ApiService.ajukanPengembalianWithDate(
-        loan['id_peminjaman'],
+        int.parse(loan['id_peminjaman'].toString()),
         pickedDate,
       );
 
       if (result['success'] == true) {
-        final index = loans.indexWhere(
-            (l) => l['id_peminjaman'] == loan['id_peminjaman']);
-
-        if (index != -1) {
-          setState(() {
-            loans[index]['status_pinjam'] = 'pengajuan_kembali';
-            loans[index]['tanggal_pengembalian_dipilih'] =
-                "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-          });
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Pengajuan pengembalian berhasil. Menunggu persetujuan."),
-          ),
+              content:
+                  Text("Pengajuan pengembalian berhasil. Menunggu persetujuan")),
         );
+        _loadLoans();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['message'] ?? 'Gagal')),
@@ -150,7 +182,6 @@ class _UserLoansPageState extends State<UserLoansPage> {
 
     final tanggalPinjam = item['tanggal_pinjam']?.toString();
     final jatuhTempo = item['tanggal_jatuh_tempo']?.toString();
-    final tanggalPengembalianDipilih = item['tanggal_pengembalian_dipilih']?.toString();
 
     Color statusColor;
     String statusLabel;
@@ -160,22 +191,26 @@ class _UserLoansPageState extends State<UserLoansPage> {
         statusColor = Colors.orange;
         statusLabel = 'Menunggu Persetujuan';
         break;
+
       case 'pengajuan_kembali':
         statusColor = Colors.green;
         statusLabel = 'Pengembalian Diajukan';
         break;
+
       case 'dikembalikan':
         statusColor = Colors.grey;
         statusLabel = 'Dikembalikan';
         break;
+
+      case 'dibatalkan':
+        statusColor = Colors.red;
+        statusLabel = 'Dibatalkan';
+        break;
+
+      case 'dipinjam':
       default:
         statusColor = Colors.blue;
         statusLabel = 'Dipinjam';
-    }
-
-    if (item['catatan'] == 'terlambat') {
-      statusColor = Colors.red;
-      statusLabel += ' (Terlambat)';
     }
 
     return InkWell(
@@ -189,7 +224,6 @@ class _UserLoansPageState extends State<UserLoansPage> {
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 16),
-        elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -200,7 +234,6 @@ class _UserLoansPageState extends State<UserLoansPage> {
             children: [
               // HEADER
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
@@ -212,7 +245,8 @@ class _UserLoansPageState extends State<UserLoansPage> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -230,16 +264,42 @@ class _UserLoansPageState extends State<UserLoansPage> {
                 ],
               ),
 
-              const SizedBox(height: 14),
-
+              const SizedBox(height: 12),
               _infoRow("Tanggal Pinjam", tanggalPinjam),
               _infoRow("Jatuh Tempo", jatuhTempo),
 
-              if (tanggalPengembalianDipilih != null &&
-                  tanggalPengembalianDipilih.isNotEmpty) ...[
-                const Divider(height: 24),
-                _infoRow("Tanggal Pengembalian", tanggalPengembalianDipilih),
-              ],
+              const SizedBox(height: 12),
+
+              // ================= BUTTON =================
+              if (item['status_pinjam'] == 'dipinjam')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.assignment_return),
+                    label: const Text("Ajukan Pengembalian"),
+                    onPressed:
+                        isSubmitting ? null : () => _ajukanPengembalian(item),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                  ),
+                ),
+
+              if (item['status_pinjam'] == 'menunggu_persetujuan')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.cancel),
+                    label: const Text("Batalkan Peminjaman"),
+                    onPressed: isSubmitting
+                        ? null
+                        : () => _cancelPeminjaman(
+                            int.parse(item['id_peminjaman'].toString())),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -260,11 +320,12 @@ class _UserLoansPageState extends State<UserLoansPage> {
             ),
           ),
           Expanded(
-            flex: 5,
+            flex: 6,
             child: Text(
               value ?? '-',
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],

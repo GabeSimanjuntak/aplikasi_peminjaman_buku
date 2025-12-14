@@ -287,7 +287,7 @@ public function reject($id)
     public function getLoansUser($userId)
 {
     $data = Peminjaman::with(['buku.kategori'])
-        ->where('id_user', $id)
+        ->where('id_user', $userId)
         ->get()
         ->map(function ($loan) {
             return [
@@ -299,14 +299,13 @@ public function reject($id)
                 'tanggal_jatuh_tempo' => $loan->tanggal_jatuh_tempo,
                 'tanggal_pengembalian_dipilih' => $loan->tanggal_pengembalian_dipilih,
                 'status_pinjam' => $loan->status_pinjam,
-                'status_pengembalian' => $loan->status_pengembalian,
                 'catatan' => $loan->catatan,
             ];
         });
 
     return response()->json($data);
-
 }
+
 
 
     public function getByUser($id)
@@ -333,25 +332,31 @@ public function reject($id)
     public function cancelPeminjaman($id)
 {
     $p = Peminjaman::find($id);
-    if (!$p) return response()->json(['success'=>false,'message'=>'Data tidak ditemukan'],404);
 
-    if (!in_array($p->status_pinjam,['menunggu_persetujuan','dipinjam'])) {
-        return response()->json(['success'=>false,'message'=>'Peminjaman tidak bisa dibatalkan'],400);
+    if (!$p) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Data tidak ditemukan'
+        ], 404);
     }
 
-    // kembalikan stok jika status 'dipinjam'
-    if ($p->status_pinjam == 'dipinjam') {
-        $buku = Buku::find($p->id_buku);
-        if ($buku) {
-            $buku->stok_tersedia += 1;
-            $buku->save();
-        }
+    // ❗ hanya boleh cancel jika BELUM approve admin
+    if ($p->status_pinjam !== 'menunggu_persetujuan') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Peminjaman tidak dapat dibatalkan'
+        ], 400);
     }
 
-    $p->status_pinjam = 'dibatalkan';
-    $p->save();
+    $p->update([
+        'status_pinjam' => 'dibatalkan',
+        'tanggal_pengembalian_dipilih' => null
+    ]);
 
-    return response()->json(['success'=>true,'message'=>'Peminjaman dibatalkan']);
+    return response()->json([
+        'success' => true,
+        'message' => 'Peminjaman berhasil dibatalkan'
+    ]);
 }
 
 
