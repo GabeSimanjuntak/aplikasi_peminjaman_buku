@@ -155,23 +155,98 @@ class _UserLoansPageState extends State<UserLoansPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Riwayat Peminjaman"),
+        title: const Text(
+          "Riwayat Peminjaman",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF2C3E50),
+                Color(0xFF3498DB),
+              ],
+            ),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : loans.isEmpty
-              ? const Center(child: Text("Belum ada riwayat peminjaman"))
-              : RefreshIndicator(
-                  onRefresh: _loadLoans,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: loans.length,
-                    itemBuilder: (context, index) {
-                      return _loanCard(loans[index]);
-                    },
-                  ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFF5F9FF),
+              Color(0xFFE8F0F7),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF3498DB),
                 ),
+              )
+            : loans.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3498DB).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF3498DB).withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.history_rounded,
+                            size: 50,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Belum ada riwayat peminjaman",
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Color(0xFF2C3E50),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Pinjam buku terlebih dahulu untuk melihat riwayat",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadLoans,
+                    color: const Color(0xFF3498DB),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: loans.length,
+                      itemBuilder: (context, index) {
+                        return _loanCard(loans[index]);
+                      },
+                    ),
+                  ),
+      ),
     );
   }
 
@@ -185,151 +260,248 @@ class _UserLoansPageState extends State<UserLoansPage> {
 
     Color statusColor;
     String statusLabel;
+    IconData statusIcon;
 
     switch (status) {
       case 'menunggu_persetujuan':
-        statusColor = Colors.orange;
+        statusColor = Color(0xFFF39C12); // Orange
         statusLabel = 'Menunggu Persetujuan';
+        statusIcon = Icons.access_time_rounded;
         break;
 
       case 'pengajuan_kembali':
-        statusColor = Colors.green;
+        statusColor = Color(0xFF27AE60); // Green
         statusLabel = 'Pengembalian Diajukan';
+        statusIcon = Icons.check_circle_outline_rounded;
         break;
 
       case 'dikembalikan':
-        statusColor = Colors.grey;
+        statusColor = Color(0xFF95A5A6); // Grey
         statusLabel = 'Dikembalikan';
+        statusIcon = Icons.done_all_rounded;
         break;
 
       case 'dibatalkan':
-        statusColor = Colors.red;
+        statusColor = Color(0xFFE74C3C); // Red
         statusLabel = 'Dibatalkan';
+        statusIcon = Icons.cancel_rounded;
         break;
 
       case 'dipinjam':
       default:
-        statusColor = Colors.blue;
+        statusColor = Color(0xFF3498DB); // Blue
         statusLabel = 'Dipinjam';
+        statusIcon = Icons.book_rounded;
     }
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => LoanDetailPage(item: item),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // HEADER
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      judul,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LoanDetailPage(item: item),
               ),
-
-              const SizedBox(height: 12),
-              _infoRow("Tanggal Pinjam", tanggalPinjam),
-              _infoRow("Jatuh Tempo", jatuhTempo),
-
-              const SizedBox(height: 12),
-
-              // ================= BUTTON =================
-              if (item['status_pinjam'] == 'dipinjam')
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.assignment_return),
-                    label: const Text("Ajukan Pengembalian"),
-                    onPressed:
-                        isSubmitting ? null : () => _ajukanPengembalian(item),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+            );
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HEADER
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3498DB).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF3498DB).withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.menu_book_rounded,
+                        color: Color(0xFF2C3E50),
+                        size: 24,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            judul,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2C3E50),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  statusIcon,
+                                  size: 14,
+                                  color: statusColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
 
-              if (item['status_pinjam'] == 'menunggu_persetujuan')
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.cancel),
-                    label: const Text("Batalkan Peminjaman"),
-                    onPressed: isSubmitting
-                        ? null
-                        : () => _cancelPeminjaman(
-                            int.parse(item['id_peminjaman'].toString())),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                const SizedBox(height: 20),
+
+                // INFO ROWS
+                _infoRow("Tanggal Pinjam", tanggalPinjam, Icons.calendar_today_rounded),
+                const SizedBox(height: 8),
+                _infoRow("Jatuh Tempo", jatuhTempo, Icons.schedule_rounded),
+
+                const SizedBox(height: 20),
+
+                // ================= BUTTON =================
+                if (item['status_pinjam'] == 'dipinjam')
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.assignment_return_rounded, size: 20),
+                      label: const Text(
+                        "Ajukan Pengembalian",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      onPressed:
+                          isSubmitting ? null : () => _ajukanPengembalian(item),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF27AE60),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
                   ),
-                ),
-            ],
+
+                if (item['status_pinjam'] == 'menunggu_persetujuan')
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.cancel_rounded, size: 20),
+                      label: const Text(
+                        "Batalkan Peminjaman",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () => _cancelPeminjaman(
+                              int.parse(item['id_peminjaman'].toString())),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE74C3C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _infoRow(String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-            ),
+  Widget _infoRow(String label, String? value, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF3498DB).withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          Expanded(
-            flex: 6,
-            child: Text(
-              value ?? '-',
-              textAlign: TextAlign.right,
-              style:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: const Color(0xFF2C3E50),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value ?? '-',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

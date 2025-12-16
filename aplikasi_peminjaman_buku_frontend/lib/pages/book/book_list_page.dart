@@ -30,7 +30,6 @@ class _BookListPageState extends State<BookListPage> {
     });
   }
 
-
   Future<void> loadBooks() async {
     setState(() {
       loading = true;
@@ -42,6 +41,33 @@ class _BookListPageState extends State<BookListPage> {
       books = data;
       loading = false;
     });
+  }
+
+  Future<bool> showConfirmDeleteDialog(String judul) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text("Konfirmasi Hapus"),
+            content: Text(
+              "Yakin ingin menghapus buku:\n\n\"$judul\" ?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Batal"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Hapus"),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   Future<void> deleteBook(int id) async {
@@ -59,7 +85,7 @@ class _BookListPageState extends State<BookListPage> {
 
   Widget buildBookCard(Map book) {
     final bool isAvailable = book["stok_tersedia"] > 0;
-    final bool canBorrow = userRole == "user" && isAvailable; 
+    final bool canBorrow = userRole == "user" && isAvailable;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -86,9 +112,13 @@ class _BookListPageState extends State<BookListPage> {
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => deleteBook(book["id"]),
+              onPressed: () async {
+                final confirm = await showConfirmDeleteDialog(book["judul"]);
+                if (confirm) {
+                  deleteBook(book["id"]);
+                }
+              },
             ),
-           
           ],
         ),
       ),
@@ -99,8 +129,25 @@ class _BookListPageState extends State<BookListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Daftar Buku"),
+        title: const Text(
+          "Daftar Buku",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF2C3E50),
+                Color(0xFF3498DB),
+              ],
+            ),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -110,18 +157,44 @@ class _BookListPageState extends State<BookListPage> {
           );
           loadBooks();
         },
+        backgroundColor: const Color(0xFF2C3E50),
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      body: RefreshIndicator(
-        onRefresh: loadBooks,
-        child: loading
-            ? const Center(child: CircularProgressIndicator())
-            : books.isEmpty
-                ? const Center(child: Text("Belum ada buku tersedia"))
-                : ListView.builder(
-                    itemCount: books.length,
-                    itemBuilder: (context, i) => buildBookCard(books[i]),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFF5F9FF),
+              Color(0xFFE8F0F7),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: loadBooks,
+          child: loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF3498DB),
                   ),
+                )
+              : books.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "Belum ada buku tersedia",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: books.length,
+                      itemBuilder: (context, i) => buildBookCard(books[i]),
+                    ),
+        ),
       ),
     );
   }

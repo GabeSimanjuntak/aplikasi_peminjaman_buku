@@ -161,6 +161,7 @@ class BukuController extends Controller
             ], 404);
         }
 
+        // (opsional) masih dipinjam → blok
         $masihDipinjam = \App\Models\Peminjaman::where('id_buku', $id)
             ->whereIn('status_pinjam', ['dipinjam', 'menunggu_pengembalian'])
             ->exists();
@@ -168,15 +169,16 @@ class BukuController extends Controller
         if ($masihDipinjam) {
             return response()->json([
                 'success' => false,
-                'message' => 'Buku tidak bisa dihapus karena masih dipinjam'
-            ]);
+                'message' => 'Buku masih dipinjam dan tidak bisa dihapus'
+            ], 400);
         }
 
+        // ✅ DELETE FISIK (DATABASE SUDAH AMAN)
         $buku->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Buku berhasil dihapus'
+            'message' => 'Buku berhasil dihapus permanen'
         ]);
     }
 

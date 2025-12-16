@@ -12,29 +12,17 @@ class KategoriEditPage extends StatefulWidget {
 
 class _KategoriEditPageState extends State<KategoriEditPage> {
   late TextEditingController namaController;
-  String? selectedStok;
-
-  final List<String> stokOptions = ["0", "1", "2", "3", "4", "5"];
 
   @override
   void initState() {
     super.initState();
     namaController =
         TextEditingController(text: widget.kategori["nama_kategori"]);
-
-    // Pastikan nilai stok tidak null dan sesuai options
-    String? stok = widget.kategori["stok"]?.toString();
-    if (stokOptions.contains(stok)) {
-      selectedStok = stok;
-    } else {
-      selectedStok = stokOptions.first;
-    }
   }
 
   void updateKategori() async {
     final data = {
       "nama_kategori": namaController.text,
-      "stok": selectedStok ?? stokOptions.first,
     };
 
     final res = await ApiService.updateKategori(widget.kategori["id"], data);
@@ -52,35 +40,112 @@ class _KategoriEditPageState extends State<KategoriEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Edit Kategori")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: namaController,
-              decoration: const InputDecoration(labelText: "Nama Kategori"),
+      appBar: AppBar(
+        title: const Text(
+          "Edit Kategori",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF2C3E50),
+                Color(0xFF3498DB),
+              ],
             ),
-            const SizedBox(height: 20),
-            Text("Stok", style: TextStyle(fontSize: 16)),
-            DropdownButton<String>(
-              value: selectedStok,
-              items: stokOptions
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  .toList(),
-              onChanged: (val) {
-                setState(() {
-                  selectedStok = val;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: updateKategori,
-              child: const Text("Update"),
-            ),
-          ],
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFF5F9FF),
+              Color(0xFFE8F0F7),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              const Center(
+                child: Text(
+                  "Edit Kategori",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "Mengubah: ${widget.kategori["nama_kategori"]}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 30),
+              
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                child: TextFormField(
+                  controller: namaController,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.category),
+                    labelText: "Nama Kategori",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 30),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        side: const BorderSide(color: Color(0xFF2C3E50)),
+                      ),
+                      child: const Text(
+                        "Batal",
+                        style: TextStyle(color: Color(0xFF2C3E50)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: updateKategori,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3498DB),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      child: const Text(
+                        "Update",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
