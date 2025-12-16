@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Pengembalian;
 use App\Models\Peminjaman;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;     // ✔ WAJIB ADA JIKA MEMAKAI CARBON
+use Carbon\Carbon;
 use App\Models\Buku;
 
 class PengembalianController extends Controller
 {
-    // POST pengembalian buku
+    // =========================
+    // USER AJUKAN PENGEMBALIAN
+    // =========================
     public function store(Request $request)
     {
         $request->validate([
@@ -20,45 +21,31 @@ class PengembalianController extends Controller
 
         $pinjam = Peminjaman::find($request->id_peminjaman);
 
-        if ($pinjam->status_pinjam !== 'aktif') {
+        if ($pinjam->status_pinjam !== 'dipinjam') {
             return response()->json([
                 'success' => false,
-                'message' => 'Peminjaman sudah selesai atau tidak aktif'
+                'message' => 'Peminjaman tidak dalam status dipinjam'
             ], 400);
         }
 
-        // Cek keterlambatan
-        $tanggalSekarang = date('Y-m-d');
-        $statusKembali = ($tanggalSekarang > $pinjam->tanggal_jatuh_tempo) ? 'terlambat' : 'tepat waktu';
-
-        // Simpan pengembalian
-        $kembali = Pengembalian::create([
-            'id_peminjaman' => $request->id_peminjaman,
-            'tanggal_kembali' => $tanggalSekarang,
-            'status_pengembalian' => $statusKembali
-        ]);
-
-        // Update status peminjaman menjadi selesai
-        $pinjam->status_pinjam = 'selesai';
+        // user mengajukan pengembalian
+        $pinjam->status_pinjam = 'pengajuan_kembali';
         $pinjam->save();
-
-        // Update status buku menjadi tersedia
-        $buku = $pinjam->buku;
-        $buku->status = 'tersedia';
-        $buku->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Buku berhasil dikembalikan',
-            'data' => $kembali
+            'message' => 'Pengajuan pengembalian berhasil'
         ]);
     }
 
+    // =========================
+    // LIST HISTORY PENGEMBALIAN (ADMIN)
+    // =========================
     public function index()
     {
         $data = Peminjaman::with(['buku', 'user'])
-            ->where('status_pinjam', 'selesai')
-            ->orderBy('tanggal_kembali', 'desc')
+            ->where('status_pinjam', 'dikembalikan')
+            ->orderByDesc('tanggal_pengembalian_dipilih') // ✅ kolom VALID
             ->get();
 
         return response()->json([
@@ -67,49 +54,9 @@ class PengembalianController extends Controller
         ]);
     }
 
-    //     public function approve($id)
-    // {
-    //     $p = Peminjaman::findOrFail($id);
-
-    //     if ($p->status_pinjam !== 'pengajuan_kembali') {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Bukan pengajuan pengembalian'
-    //         ], 400);
-    //     }
-
-    //     $tanggalKembali = Carbon::now();
-    //     $jatuhTempo = Carbon::parse($p->tanggal_jatuh_tempo);
-
-    //     // update peminjaman
-    //     $p->status_pinjam = 'dikembalikan';
-    //     $p->tanggal_kembali = $tanggalKembali;
-    //     $p->save();
-
-    //     // update stok buku
-    //     $buku = Buku::find($p->id_buku);
-    //     $buku->stok_tersedia += 1;
-    //     $buku->save();
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Pengembalian disetujui'
-    //     ]);
-    // }
-
-    // ✅ HISTORY ADMIN
-    public function history()
-    {
-        return response()->json([
-            'success' => true,
-            'data' => Peminjaman::where('status_pinjam', 'dikembalikan')
-                ->orderByDesc('tanggal_kembali')
-                ->get()
-        ]);
-    }
-
-
-
+    // =========================
+    // APPROVE PENGEMBALIAN (ADMIN)
+    // =========================
     public function approvePengembalian($id)
     {
         $p = Peminjaman::find($id);
@@ -128,24 +75,26 @@ class PengembalianController extends Controller
             ], 400);
         }
 
+        // ✅ ADMIN HANYA UBAH STATUS
         $p->status_pinjam = 'dikembalikan';
-        $p->tanggal_pengembalian_dipilih = now()->toDateString();
         $p->save();
 
+        // ✅ SIMPAN DATA REAL KE TABEL PENGEMBALIAN
         Pengembalian::create([
             'id_peminjaman' => $p->id,
-            'tanggal_kembali' => now()->toDateString(), // kolom pengembalian
+            'tanggal_kembali' => $p->tanggal_pengembalian_dipilih, // 🔥 PAKAI TANGGAL USULAN
             'status_pengembalian' => 'dikembalikan'
         ]);
 
-
-        // update stok buku
+        // ✅ KEMBALIKAN STOK BUKU
         $buku = Buku::find($p->id_buku);
         if ($buku) {
-            $buku->stok_tersedia = min($buku->stok_tersedia + 1, $buku->stok);
+            $buku->stok_tersedia = min(
+                $buku->stok_tersedia + 1,
+                $buku->stok
+            );
             $buku->save();
         }
-
 
         return response()->json([
             'success' => true,
@@ -153,4 +102,16 @@ class PengembalianController extends Controller
         ]);
     }
 
+    // =========================
+    // HISTORY ADMIN (ALTERNATIF)
+    // =========================
+    public function history()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => Peminjaman::where('status_pinjam', 'dikembalikan')
+                ->orderByDesc('tanggal_pengembalian_dipilih') // ✅ FIX
+                ->get()
+        ]);
+    }
 }
