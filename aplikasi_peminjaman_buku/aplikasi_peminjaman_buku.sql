@@ -1,3 +1,4 @@
+
 CREATE DATABASE aplikasi_peminjaman_buku;
     \c aplikasi_peminjaman_buku;
 
@@ -355,3 +356,21 @@ MODIFY status_pinjam ENUM(
   'ditolak',
   'dibatalkan'
 ) NOT NULL;
+
+delete from buku;
+
+ALTER TABLE peminjaman
+ALTER COLUMN id_buku DROP NOT NULL;
+
+SELECT constraint_name
+FROM information_schema.table_constraints
+WHERE table_name = 'peminjaman';
+
+ALTER TABLE peminjaman
+DROP CONSTRAINT peminjaman_id_buku_fkey;
+
+ALTER TABLE peminjaman
+ADD CONSTRAINT peminjaman_id_buku_fkey
+FOREIGN KEY (id_buku)
+REFERENCES buku(id)
+ON DELETE SET NULL;
