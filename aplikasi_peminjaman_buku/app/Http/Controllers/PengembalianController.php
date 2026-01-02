@@ -91,7 +91,7 @@ class PengembalianController extends Controller
         if ($buku) {
             $buku->stok_tersedia = min(
                 $buku->stok_tersedia + 1,
-                $buku->stok
+                $buku->stok_total
             );
             $buku->save();
         }
